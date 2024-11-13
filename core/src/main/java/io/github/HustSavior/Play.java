@@ -30,7 +30,7 @@ public class Play implements Screen {
         camera.zoom = -1.2f;
         // Set the camera to the size of the screen
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        player = new Player(new Sprite(new Texture("sprites/player.png")), 500,500);
+        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500,500);
         inputHandler = new InputHandler(player);
         Gdx.input.setInputProcessor(inputHandler);
     }
