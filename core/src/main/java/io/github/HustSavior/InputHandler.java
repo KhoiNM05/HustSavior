@@ -66,7 +66,7 @@ public class InputHandler extends InputAdapter {
             if (prevLeft) player.setRegion(player.walkLeft.getKeyFrame(stateTime, true));
             else player.setRegion(player.walkRight.getKeyFrame(stateTime, true));
         }
-        stateTime=0;
+
     }
 
 };
