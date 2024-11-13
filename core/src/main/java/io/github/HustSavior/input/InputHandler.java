@@ -1,8 +1,12 @@
 package io.github.HustSavior.input;
 
+import static org.junit.jupiter.api.Assumptions.abort;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.math.Vector2;
+
 import io.github.HustSavior.entities.Player;
 
 public class InputHandler extends InputAdapter {
@@ -43,26 +47,42 @@ public class InputHandler extends InputAdapter {
     }
 
     public void update(float delta) {
-        float newX = player.getX();
-        float newY = player.getY();
+        // float newX = player.getX();
+        // float newY = player.getY();
 
+        // if (left) {
+        //     newX -= player.getSpeed() * delta;
+        // }
+        // if (right) {
+        //     newX += player.getSpeed() * delta;
+        // }
+        // if (up) {
+        //     newY += player.getSpeed() * delta;
+        // }
+        // if (down) {
+        //     newY -= player.getSpeed() * delta;
+        // }
+
+        // // Clamp the player's position within the map boundaries
+        // newX = Math.max(0, Math.min(newX, mapWidth - player.getWidth()));
+        // newY = Math.max(0, Math.min(newY, mapHeight - player.getHeight()));
+        // player.setPosition(newX, newY);
+
+         Vector2 velocity = new Vector2();
         if (left) {
-            newX -= player.getSpeed() * delta;
+            velocity.x = -player.getSpeed();
         }
         if (right) {
-            newX += player.getSpeed() * delta;
+            velocity.x = player.getSpeed();
         }
         if (up) {
-            newY += player.getSpeed() * delta;
+            velocity.y = player.getSpeed();
         }
         if (down) {
-            newY -= player.getSpeed() * delta;
+            velocity.y = -player.getSpeed();
         }
-
-        // Clamp the player's position within the map boundaries
-        newX = Math.max(0, Math.min(newX, mapWidth - player.getWidth()));
-        newY = Math.max(0, Math.min(newY, mapHeight - player.getHeight()));
-        player.setPosition(newX, newY);
+        System.out.println(velocity);
+        player.setVelocity(velocity);
     }
 
 };
