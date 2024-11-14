@@ -12,7 +12,7 @@ import com.badlogic.gdx.physics.box2d.World;
 
 import io.github.HustSavior.Play;
 public class Player extends Sprite {
-    private float speed = 1f;
+    private float speed = 0.5f;
     private Body body;
     private Vector2 prevPos ;
     private Vector2 currPos;
