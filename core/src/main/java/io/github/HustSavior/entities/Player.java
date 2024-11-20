@@ -15,7 +15,7 @@ public class Player extends Sprite {
     private TextureRegion[] left, right;
     public Animation<TextureRegion> walkLeft, walkRight;
 
-    private float speed = 60 * 2;
+    private float speed = 60 ;
 
 
     public Player(Sprite sprite, float x, float y) {

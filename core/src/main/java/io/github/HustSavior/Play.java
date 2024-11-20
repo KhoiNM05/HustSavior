@@ -11,6 +11,7 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.Screen;
 import io.github.HustSavior.entities.Player;
 import net.dermetfan.gdx.physics.box2d.PositionController;
+import skills.Calculus;
 
 public class Play implements Screen {
     private OrthographicCamera camera;
@@ -18,11 +19,12 @@ public class Play implements Screen {
     private OrthogonalTiledMapRenderer renderer;
     private Player player;
     private InputHandler inputHandler;
+
+    private Calculus calculus;
     @Override
     public void show() {
         // Load the tmx file
         map = new TmxMapLoader().load("map/map.tmx");
-
         //Initialize the map renderer with the loaded map
         renderer = new OrthogonalTiledMapRenderer(map);
         // Initialize new camera (orthographic)
@@ -32,6 +34,7 @@ public class Play implements Screen {
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500,500);
         inputHandler = new InputHandler(player);
+        calculus= new Calculus(new Sprite(new Texture("skills/parabol1.png")), player);
         Gdx.input.setInputProcessor(inputHandler);
     }
     @Override
@@ -47,6 +50,7 @@ public class Play implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         // Update the player's position based on input
         inputHandler.update(delta);
+        calculus.update(delta);
         // Make the camera follow the player
         camera.position.set(player.getX() + player.getWidth()/2, player.getY() + player.getHeight()/2, 0);
         handleZoom();
@@ -57,6 +61,7 @@ public class Play implements Screen {
         renderer.render();
         renderer.getBatch().begin();
         player.draw(renderer.getBatch());
+        if (calculus.isReady()) calculus.draw(renderer.getBatch());
         renderer.getBatch().end();
 
 
