@@ -1,44 +1,74 @@
 package io.github.HustSavior.entities;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.*;
 
 public class Player extends Sprite {
-    private Vector2 velocity = new Vector2();
-    private Vector2 position = new Vector2();
-    private TextureRegion[] left, right;
-    public Animation<TextureRegion> walkLeft, walkRight;
+    private static final float ANIMATION_SPEED = 0.2f;
+    private static final float MOVEMENT_SPEED = 120f;
+    private static final float COLLISION_RADIUS = 8f;
+    
+    public final Animation<TextureRegion> walkLeft;
+    public final Animation<TextureRegion> walkRight;
+    private final Body body;
 
-    private float speed = 60 ;
-
-
-    public Player(Sprite sprite, float x, float y) {
+    public Player(Sprite sprite, float x, float y, World world) {
         super(sprite);
         setPosition(x, y);
-        left= new TextureRegion[2];
-        right=new TextureRegion[2];
-
-        left[0]=new TextureRegion(new Texture("sprites/WalkRight1.png"));
-        left[1]=new TextureRegion(new Texture("sprites/WalkRight2.png"));
-
-        right[0]=new TextureRegion(new Texture("sprites/WalkRight1.png"));
-        right[1]=new TextureRegion(new Texture("sprites/WalkRight2.png"));
-        walkLeft= new Animation<TextureRegion>(0.2f, left);
-        walkRight= new Animation<TextureRegion>(0.2f, left);
+        
+        // Initialize animations
+        walkLeft = createAnimation("sprites/WalkRight");
+        walkRight = createAnimation("sprites/WalkRight");
+        
+        // Initialize physics body
+        body = createBody(world, x, y);
     }
 
+    private Animation<TextureRegion> createAnimation(String basePath) {
+        TextureRegion[] frames = new TextureRegion[2];
+        frames[0] = new TextureRegion(new Texture(basePath + "1.png"));
+        frames[1] = new TextureRegion(new Texture(basePath + "2.png"));
+        return new Animation<>(ANIMATION_SPEED, frames);
+    }
+
+    private Body createBody(World world, float x, float y) {
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.DynamicBody;
+        bodyDef.position.set(x, y);
+        
+        Body playerBody = world.createBody(bodyDef);
+        
+        CircleShape shape = new CircleShape();
+        shape.setRadius(COLLISION_RADIUS);
+
+        FixtureDef fixtureDef = new FixtureDef();
+        fixtureDef.shape = shape;
+        fixtureDef.density = 1f;
+        fixtureDef.friction = 0.4f;
+        fixtureDef.restitution = 0.6f;
+
+        playerBody.createFixture(fixtureDef);
+        shape.dispose();
+        
+        return playerBody;
+    }
+
+   
     public void draw(SpriteBatch batch) {
+        setPosition(body.getPosition().x - getWidth() / 2, 
+                   body.getPosition().y - getHeight() / 2);
         super.draw(batch);
     }
 
-
     public float getSpeed() {
-        return speed;
+        return MOVEMENT_SPEED;
+    }
+
+    public Body getBody() {
+        return body;
     }
 }
