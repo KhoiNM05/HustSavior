@@ -1,4 +1,4 @@
-package skills;
+package io.github.HustSavior.skills;
 
 public class CooldownController {
 

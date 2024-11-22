@@ -18,6 +18,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.CollisionListener;
+import io.github.HustSavior.skills.Calculus;
 
 public class Play implements Screen {
     private static final float INITIAL_ZOOM = -1.2f;
@@ -25,7 +26,7 @@ public class Play implements Screen {
     private static final float MIN_ZOOM = 0.1f;
     private static final float MAX_ZOOM = 10f;
     private static final float WORLD_STEP_TIME = 1/60f;
-    
+
     private final OrthographicCamera camera;
     private final TiledMap map;
     private final OrthogonalTiledMapRenderer renderer;
@@ -33,13 +34,16 @@ public class Play implements Screen {
     private final InputHandler inputHandler;
     private final World world;
 
+    private final Calculus calculus;
+
     public Play() {
         map = new TmxMapLoader().load("map/map.tmx");
         renderer = new OrthogonalTiledMapRenderer(map);
         camera = setupCamera();
         world = setupWorld();
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 
+        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
                           500, 500, world);
+        calculus= new Calculus(new Sprite(new Texture("skills/parabol7.png")), player);
         inputHandler = new InputHandler(player);
         createCollisionBodies();
     }
@@ -99,6 +103,7 @@ public class Play implements Screen {
 
     private void updateGame(float delta) {
         inputHandler.update(delta);
+        calculus.update(delta);
         updateCamera();
     }
 
@@ -117,6 +122,7 @@ public class Play implements Screen {
         renderer.render();
         renderer.getBatch().begin();
         player.draw((SpriteBatch)renderer.getBatch());
+        if(calculus.isReady()) calculus.draw((SpriteBatch)renderer.getBatch());
         renderer.getBatch().end();
     }
 
