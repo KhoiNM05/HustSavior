@@ -15,7 +15,7 @@ public class HustSavior extends Game {
     @Override
     public void create() {
 
-        setScreen(new SplashScreen(this));
+        setScreen(new Play(this));
     }
     @Override
     public void resize(int width, int height){
