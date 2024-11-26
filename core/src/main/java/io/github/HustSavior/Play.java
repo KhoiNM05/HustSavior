@@ -132,7 +132,11 @@ public class Play implements Screen {
     }
 
     
-
+    @Override
+    public void show() {
+        Gdx.input.setInputProcessor(inputHandler);
+    }
+    
     @Override
     public void render(float delta) {
         clearScreen();
