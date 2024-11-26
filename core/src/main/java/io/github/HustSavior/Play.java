@@ -9,24 +9,31 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.CollisionListener;
+import io.github.HustSavior.utils.GameConfig;
 
 public class Play implements Screen {
+    private final float PPM = GameConfig.PPM;
     private static final float INITIAL_ZOOM = -1.2f;
     private static final float ZOOM_SPEED = 0.02f;
     private static final float MIN_ZOOM = 0.1f;
     private static final float MAX_ZOOM = 10f;
     private static final float WORLD_STEP_TIME = 1/60f;
-    
+
     private final OrthographicCamera camera;
+    private final Viewport viewport;
     private final TiledMap map;
     private final OrthogonalTiledMapRenderer renderer;
     private final Player player;
@@ -36,9 +43,12 @@ public class Play implements Screen {
     public Play() {
         map = new TmxMapLoader().load("map/map.tmx");
         renderer = new OrthogonalTiledMapRenderer(map);
-        camera = setupCamera();
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
+        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
+        camera.update();
         world = setupWorld();
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 
+        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
                           500, 500, world);
         inputHandler = new InputHandler(player);
         createCollisionBodies();
@@ -61,6 +71,8 @@ public class Play implements Screen {
         for (MapObject object : map.getLayers().get("collisions").getObjects()) {
             if (object instanceof RectangleMapObject) {
                 createStaticBody((RectangleMapObject) object);
+            }else if (object instanceof PolygonMapObject) {
+                createStaticBody((PolygonMapObject) object);
             }
         }
     }
@@ -69,14 +81,54 @@ public class Play implements Screen {
         Rectangle rect = rectangleObject.getRectangle();
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.StaticBody;
-        bodyDef.position.set(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        bodyDef.position.set((rect.x + rect.width / 2)/PPM, (rect.y + rect.height / 2)/PPM);
 
         Body body = world.createBody(bodyDef);
         PolygonShape shape = new PolygonShape();
-        shape.setAsBox(rect.width / 2, rect.height / 2);
+        shape.setAsBox(rect.width / 2 / PPM , rect.height / 2 /PPM);
 
         body.createFixture(shape, 0.0f);
         shape.dispose();
+    }
+    private void createStaticBody(PolygonMapObject polygonObject) {
+        try {
+            // Get polygon vertices
+            Polygon polygon = polygonObject.getPolygon();
+            float[] vertices = polygon.getTransformedVertices();
+            Vector2[] worldVertices = new Vector2[vertices.length / 2];
+    
+            // Convert vertices to Box2D coordinates
+            for (int i = 0; i < vertices.length / 2; i++) {
+                worldVertices[i] = new Vector2(
+                    vertices[i * 2] / GameConfig.PPM,
+                    vertices[i * 2 + 1] / GameConfig.PPM
+                );
+            }
+    
+            // Create body definition
+            BodyDef bodyDef = new BodyDef();
+            bodyDef.type = BodyDef.BodyType.StaticBody;
+            bodyDef.position.set(0, 0); // Position is already in transformed vertices
+    
+            // Create body and shape
+            Body body = world.createBody(bodyDef);
+            PolygonShape shape = new PolygonShape();
+            shape.set(worldVertices);
+    
+            // Create fixture
+            FixtureDef fixtureDef = new FixtureDef();
+            fixtureDef.shape = shape;
+            fixtureDef.density = 1.0f;
+            fixtureDef.friction = 0.4f;
+            fixtureDef.restitution = 0.0f;
+    
+            body.createFixture(fixtureDef);
+            shape.dispose();
+    
+            Gdx.app.log("Play", "Created polygon body with " + worldVertices.length + " vertices");
+        } catch (Exception e) {
+            Gdx.app.error("Play", "Failed to create polygon body", e);
+        }
     }
 
     @Override
@@ -139,8 +191,8 @@ public class Play implements Screen {
     }
 
     @Override public void resize(int width, int height) {
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
+        viewport.update(width, height, true);
+        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
         camera.update();
     }
 
