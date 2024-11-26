@@ -15,7 +15,9 @@ public class HustSavior extends Game {
     @Override
     public void create() {
 
-        setScreen(new Play(this));
+
+        setScreen(new Play());
+
     }
     @Override
     public void resize(int width, int height){
@@ -23,7 +25,7 @@ public class HustSavior extends Game {
     }
 
 
-    @Override
+    @Override       
     public void pause() {
         super.pause();
     }
