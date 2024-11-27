@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 public class AssetSetter {
 
-    ArrayList<Item> objectList;
+    public ArrayList<Item> objectList;
 
     public AssetSetter(){
         objectList= new ArrayList<Item>();

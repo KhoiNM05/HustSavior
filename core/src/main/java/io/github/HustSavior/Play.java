@@ -21,8 +21,10 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.HustSavior.entities.Player;
+import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.utils.CollisionListener;
 import io.github.HustSavior.utils.GameConfig;
+import items.AssetSetter;
 
 public class Play implements Screen {
     private final float PPM = GameConfig.PPM;
@@ -38,6 +40,8 @@ public class Play implements Screen {
     private final OrthogonalTiledMapRenderer renderer;
     private final Player player;
     private final InputHandler inputHandler;
+    private final AssetSetter assetSetter;
+    private final SkillManager skillManager;
     private final World world;
 
     public Play() {
@@ -50,7 +54,11 @@ public class Play implements Screen {
         world = setupWorld();
         player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
                           500, 500, world);
+        assetSetter= new AssetSetter();
         inputHandler = new InputHandler(player);
+        skillManager= new SkillManager(player);
+        skillManager.activateSkills(1);
+        loadItems();
         createCollisionBodies();
     }
 
@@ -96,7 +104,7 @@ public class Play implements Screen {
             Polygon polygon = polygonObject.getPolygon();
             float[] vertices = polygon.getTransformedVertices();
             Vector2[] worldVertices = new Vector2[vertices.length / 2];
-    
+
             // Convert vertices to Box2D coordinates
             for (int i = 0; i < vertices.length / 2; i++) {
                 worldVertices[i] = new Vector2(
@@ -104,39 +112,44 @@ public class Play implements Screen {
                     vertices[i * 2 + 1] / GameConfig.PPM
                 );
             }
-    
+
             // Create body definition
             BodyDef bodyDef = new BodyDef();
             bodyDef.type = BodyDef.BodyType.StaticBody;
             bodyDef.position.set(0, 0); // Position is already in transformed vertices
-    
+
             // Create body and shape
             Body body = world.createBody(bodyDef);
             PolygonShape shape = new PolygonShape();
             shape.set(worldVertices);
-    
+
             // Create fixture
             FixtureDef fixtureDef = new FixtureDef();
             fixtureDef.shape = shape;
             fixtureDef.density = 1.0f;
             fixtureDef.friction = 0.4f;
             fixtureDef.restitution = 0.0f;
-    
+
             body.createFixture(fixtureDef);
             shape.dispose();
-    
+
             Gdx.app.log("Play", "Created polygon body with " + worldVertices.length + " vertices");
         } catch (Exception e) {
             Gdx.app.error("Play", "Failed to create polygon body", e);
         }
     }
 
-    
+    private void loadItems(){
+        assetSetter.createObject(700, 700, 1, world);
+    }
+
+
+
     @Override
     public void show() {
         Gdx.input.setInputProcessor(inputHandler);
     }
-    
+
     @Override
     public void render(float delta) {
         clearScreen();
@@ -152,6 +165,7 @@ public class Play implements Screen {
 
     private void updateGame(float delta) {
         inputHandler.update(delta);
+        skillManager.update(delta);
         updateCamera();
     }
 
@@ -170,6 +184,8 @@ public class Play implements Screen {
         renderer.render();
         renderer.getBatch().begin();
         player.draw((SpriteBatch)renderer.getBatch());
+        skillManager.drawSkills((SpriteBatch)renderer.getBatch());
+        assetSetter.drawObject((SpriteBatch) renderer.getBatch());
         renderer.getBatch().end();
     }
 
@@ -201,5 +217,5 @@ public class Play implements Screen {
     @Override public void pause() {}
     @Override public void resume() {}
 
-   
+
 }

@@ -21,6 +21,7 @@ public class Calculus extends Sprite {
     private float castingY;
 
 
+
     Player player;
 
     public Calculus(Sprite sprite, Player player){
