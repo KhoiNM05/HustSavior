@@ -3,6 +3,7 @@ package io.github.HustSavior;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.Game;
+import io.github.HustSavior.screen.SplashScreen;
 
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
@@ -13,7 +14,10 @@ public class HustSavior extends Game {
 
     @Override
     public void create() {
+
+
         setScreen(new Play());
+
     }
     @Override
     public void resize(int width, int height){
@@ -21,7 +25,7 @@ public class HustSavior extends Game {
     }
 
 
-    @Override
+    @Override       
     public void pause() {
         super.pause();
     }
