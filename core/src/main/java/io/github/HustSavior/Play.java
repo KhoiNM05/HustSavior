@@ -19,6 +19,7 @@ import com.badlogic.gdx.physics.box2d.*;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.CollisionListener;
 import io.github.HustSavior.skills.Calculus;
+import items.AssetSetter;
 
 public class Play implements Screen {
     private static final float INITIAL_ZOOM = -1.2f;
@@ -33,6 +34,7 @@ public class Play implements Screen {
     private final Player player;
     private final InputHandler inputHandler;
     private final World world;
+    private final AssetSetter assetSetter;
 
     private final Calculus calculus;
 
@@ -45,6 +47,8 @@ public class Play implements Screen {
                           500, 500, world);
         calculus= new Calculus(new Sprite(new Texture("skills/parabol7.png")), player);
         inputHandler = new InputHandler(player);
+        assetSetter= new AssetSetter();
+        assetSetter.createObject(700, 700, 1, world);
         createCollisionBodies();
     }
 
@@ -123,6 +127,7 @@ public class Play implements Screen {
         renderer.getBatch().begin();
         player.draw((SpriteBatch)renderer.getBatch());
         if(calculus.isReady()) calculus.draw((SpriteBatch)renderer.getBatch());
+        assetSetter.drawObject((SpriteBatch) renderer.getBatch());
         renderer.getBatch().end();
     }
 

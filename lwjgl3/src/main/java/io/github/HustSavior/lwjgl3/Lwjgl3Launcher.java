@@ -8,8 +8,7 @@ import io.github.HustSavior.HustSavior;
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
-        createApplication();
-    }
+        createApplication();    }
 
     private static Lwjgl3Application createApplication() {
         return new Lwjgl3Application(new HustSavior(), getDefaultConfiguration());
