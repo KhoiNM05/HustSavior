@@ -1,58 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<<<<<<< HEAD
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="149" height="110" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="56">
-=======
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="149" height="110" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="36">
->>>>>>> dev
+
  <tileset firstgid="1" name="BackGroundDimmed (Copy)" tilewidth="32" tileheight="32" tilecount="13625" columns="125">
   <image source="BackGroundDimmed (Copy).png" width="4000" height="3500"/>
  </tileset>
  <tileset firstgid="13626" name="test" tilewidth="32" tileheight="32" tilecount="8374" columns="106">
   <image source="test.png" width="3423" height="2544"/>
  </tileset>
-<<<<<<< HEAD
- <objectgroup id="2" name="Library">
-  <object id="11" gid="15433" x="2164" y="2456" width="32" height="32"/>
- </objectgroup>
- <objectgroup id="5" name="collisions">
-  <object id="14" x="204" y="2434.67" width="232" height="689.333"/>
-  <object id="15" x="438.667" y="2977.33" width="86.6667" height="141.333"/>
-  <object id="16" x="525.333" y="3118.67"/>
-  <object id="19" x="506" y="2065.33">
-   <polygon points="0,0 0,471.333 206,473.333 1242.67,-564.667 1228.67,-1142"/>
-  </object>
-  <object id="20" x="1751.33" y="1501.33">
-   <polygon points="0,0 32,0.666667 32.6667,-97.3333 113.333,-96 113.333,1.33333 197.333,1.33333 200.667,-392.667 -14.6667,-391.333"/>
-  </object>
-  <object id="25" x="3474" y="1328" width="17.3333" height="0.666667"/>
-  <object id="27" x="2558.67" y="1141.33" width="589.333" height="215.333"/>
-  <object id="28" x="3146.67" y="1046" width="230.667" height="329.333"/>
-  <object id="29" x="3379.33" y="1373.33">
-   <polygon points="0,0 -1.33333,-76.6667 287.333,-74 282,-336.667 -1.33333,-330"/>
-  </object>
-  <object id="33" x="4172" y="2219.33" width="348" height="469.333"/>
-  <object id="34" x="4520" y="2688.67" width="4.66667" height="15.3333"/>
-  <object id="36" x="4160.67" y="2218.67" width="607.333" height="1302"/>
-  <object id="39" x="3664" y="1270" width="1106" height="806"/>
-  <object id="40" x="4158" y="2080" width="608" height="144"/>
-  <object id="42" x="4042" y="2322"/>
-  <object id="43" x="4122" y="2292"/>
-  <object id="45" x="2152.67" y="1324.67" width="400.667" height="32.6667"/>
-  <object id="46" x="1868" y="1315.33" width="284" height="135.333"/>
-  <object id="47" x="1894" y="1490.67"/>
-  <object id="48" x="1916.67" y="1480.67"/>
-  <object id="49" x="1872.67" y="1504.67" width="10" height="143.333"/>
-  <object id="50" x="1869.33" y="1634" width="90" height="16.6667"/>
-  <object id="51" x="2050" y="1636" width="508" height="16"/>
-  <object id="52" x="2551.33" y="1356.67" width="15.3333" height="292"/>
-  <object id="53" x="197" y="2972.67" width="347" height="144.667"/>
-  <object id="54" x="196.667" y="2208.67" width="240" height="907.333"/>
-  <object id="55" x="352.667" y="2104.67" width="230.667" height="432.667"/>
- </objectgroup>
-=======
- <tileset firstgid="22000" name="Building" tilewidth="1" tileheight="1" tilecount="0" columns="0"/>
- <tileset firstgid="22000" source="24968.tsx"/>
->>>>>>> dev
  <layer id="1" name="Tile Layer 1" width="149" height="110">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
