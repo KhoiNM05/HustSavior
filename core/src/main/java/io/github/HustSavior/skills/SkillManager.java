@@ -25,9 +25,8 @@ public class SkillManager {
 
     public void update(float delta){
         for (int i=0; i<skillList.size(); i++){
-            if (skillList.get(i).isReady()){
                 skillList.get(i).update(delta);
-            }
+
         }
     }
 

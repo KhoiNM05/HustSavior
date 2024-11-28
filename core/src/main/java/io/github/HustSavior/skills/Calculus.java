@@ -20,8 +20,6 @@ public class Calculus extends Sprite {
     private float castingX;
     private float castingY;
 
-
-
     Player player;
 
     public Calculus(Sprite sprite, Player player){
@@ -49,27 +47,30 @@ public class Calculus extends Sprite {
     }
 
     public void update(float delta){
-        stateTime+=delta;
+            // Start animation if cooldown is ready
+            if (isReady()) {
+                // Play animation
+                setRegion(cast.getKeyFrame(stateTime, false)); // 'false' ensures animation stops at the last frame
+                if (stateTime<=0) {
+                    // Get initial position of skill shots
+                    castingX = player.getX();
+                    castingY = player.getY();
+                }
+                setPosition(castingX, castingY);
 
-        if (isReady()){
+                // Check if animation has finished
+                if (stateTime >= getAnimationTime) {
+                    cd.resetCooldown(); // Reset cooldown only after animation completes
+                    stateTime = 0; // Reset stateTime for the next animation cycle
+                }
+                else{
+                    stateTime += delta;
+                }
+            } else {
+                cd.cooldownTimer(delta); // Update cooldown
+            }
 
-            setRegion(cast.getKeyFrame(stateTime, true));
-            //get initial position of skill shots
-            if (animationTime==getAnimationTime){
-                castingX=player.getX();
-                castingY=player.getY();
-            }
-            setPosition(castingX, castingY);
-            animationTime-=delta;
-            if (animationTime<=0){
-                cd.resetCooldown();
-                animationTime=getAnimationTime;
-                stateTime=0;
-            }
-        }
-        else{
-            cd.cooldownTimer(delta);
-        }
+
 
     }
 

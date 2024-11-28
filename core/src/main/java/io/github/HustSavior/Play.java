@@ -140,7 +140,7 @@ public class Play implements Screen {
     }
 
     private void loadItems(){
-        assetSetter.createObject(700, 700, 1, world);
+        assetSetter.createObject(700, 700, 1, PPM, world);
     }
 
 

@@ -16,9 +16,9 @@ public class AssetSetter {
         objectList= new ArrayList<Item>();
     }
 
-    public void createObject(int x, int y, int id, World world){
+    public void createObject(int x, int y, int id, float PPM, World world){
         switch (id) {
-            case 1: objectList.add(new CalcBook(x, y, world));
+            case 1: objectList.add(new CalcBook(x, y, PPM, world));
                     break;
             default:
         }
