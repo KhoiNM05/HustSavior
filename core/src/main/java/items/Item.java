@@ -16,21 +16,18 @@ public class Item {
 
     public Body createStaticBody(int x, int y, float PPM, World world){
         BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.StaticBody;
-        bodyDef.position.set((x+rectX/2f)/PPM, (y+rectY/2f)/PPM);
+        bodyDef.type = BodyDef.BodyType.DynamicBody;
+        bodyDef.position.set((x+sprite.getRegionWidth()/2f)/PPM, (y+sprite.getRegionHeight()/2f)/PPM);
 
         Body ItemBody = world.createBody(bodyDef);
         PolygonShape shape=new PolygonShape();
-        shape.setAsBox(rectX/2.0f/PPM, rectY/2.0f/PPM);
+        shape.setAsBox(sprite.getRegionWidth()/2f/PPM, sprite.getRegionHeight()/PPM);
 
         FixtureDef fixtureDef= new FixtureDef();
         fixtureDef.shape=shape;
-        fixtureDef.density = 1.0f;
-        fixtureDef.friction = 0.4f;
-        fixtureDef.restitution = 0.0f;
-        fixtureDef.filter.categoryBits=0x0001;
+        fixtureDef.isSensor=true;
 
-        ItemBody.createFixture(fixtureDef);
+        ItemBody.createFixture(fixtureDef).setUserData(this);
         shape.dispose();
 
         return ItemBody;

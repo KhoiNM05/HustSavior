@@ -30,11 +30,11 @@ public class InputHandler extends InputAdapter {
     @Override
     public boolean keyUp(int keycode) {
         switch (keycode) {
-            case Input.Keys.A: 
+            case Input.Keys.A:
                 left = false;
                 facingLeft = true;
                 break;
-            case Input.Keys.D: 
+            case Input.Keys.D:
                 right = false;
                 facingLeft = false;
                 break;
@@ -67,7 +67,8 @@ public class InputHandler extends InputAdapter {
             player.setRegion(player.walkRight.getKeyFrame(stateTime, true));
         } else if (velocity.y != 0) {
             player.setRegion((facingLeft ? player.walkLeft : player.walkRight)
-                           .getKeyFrame(stateTime, true));
+                .getKeyFrame(stateTime, true));
         }
     }
+
 }

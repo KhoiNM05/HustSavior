@@ -65,7 +65,7 @@ public class Player extends Sprite {
         fixtureDef.filter.categoryBits = 0x0002; // Player category
         fixtureDef.filter.maskBits = 0x0001;     // Collide with world objects
 
-        playerBody.createFixture(fixtureDef);
+        playerBody.createFixture(fixtureDef).setUserData(this);
         shape.dispose();
 
         return playerBody;
@@ -85,4 +85,6 @@ public class Player extends Sprite {
     public Body getBody() {
         return body;
     }
+
+    public float getPPM(){return PPM;}
 }

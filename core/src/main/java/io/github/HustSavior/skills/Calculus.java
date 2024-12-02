@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.physics.box2d.*;
 import io.github.HustSavior.entities.Player;
 
 public class Calculus extends Sprite {
@@ -17,15 +18,19 @@ public class Calculus extends Sprite {
     private float animationTime;
     private float getAnimationTime;
 
+    private World world;
+    public Body hitbox;
+
     private float castingX;
     private float castingY;
 
     Player player;
 
-    public Calculus(Sprite sprite, Player player){
+    public Calculus(Sprite sprite, Player player, World world){
         super(sprite);
         this.cd=new CooldownController(DEFAULT_COOLDOWN);
         this.player=player;
+        this.world=world;
 
         cast=createAnimation();
         getAnimationTime=cast.getAnimationDuration();
@@ -53,14 +58,16 @@ public class Calculus extends Sprite {
                 setRegion(cast.getKeyFrame(stateTime, false)); // 'false' ensures animation stops at the last frame
                 if (stateTime<=0) {
                     // Get initial position of skill shots
-                    castingX = player.getX();
+                    castingX = player.getX()+2*player.getRegionWidth()/2;
                     castingY = player.getY();
+                    hitbox=createHitbox((int)castingX, (int)castingY, player.getPPM(), world);
                 }
                 setPosition(castingX, castingY);
 
                 // Check if animation has finished
                 if (stateTime >= getAnimationTime) {
                     cd.resetCooldown(); // Reset cooldown only after animation completes
+                    world.destroyBody(hitbox);
                     stateTime = 0; // Reset stateTime for the next animation cycle
                 }
                 else{
@@ -72,6 +79,25 @@ public class Calculus extends Sprite {
 
 
 
+    }
+
+    public Body createHitbox(int x, int y, float PPM, World world){
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.DynamicBody;
+        bodyDef.position.set((x+getRegionWidth()/2f)/PPM, (y+getRegionHeight()/2f)/PPM);
+
+        Body ItemBody = world.createBody(bodyDef);
+        PolygonShape shape=new PolygonShape();
+        shape.setAsBox(getRegionWidth()/2.0f/PPM, getRegionHeight()/2.0f/PPM);
+
+        FixtureDef fixtureDef= new FixtureDef();
+        fixtureDef.shape=shape;
+        fixtureDef.isSensor=true;
+
+        ItemBody.createFixture(fixtureDef).setUserData(this);
+        shape.dispose();
+
+        return ItemBody;
     }
 
     public boolean isReady(){

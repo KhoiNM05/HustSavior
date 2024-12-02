@@ -56,7 +56,7 @@ public class Play implements Screen {
                           500, 500, world);
         assetSetter= new AssetSetter();
         inputHandler = new InputHandler(player);
-        skillManager= new SkillManager(player);
+        skillManager= new SkillManager(player, world);
         skillManager.activateSkills(1);
         loadItems();
         createCollisionBodies();
@@ -95,7 +95,7 @@ public class Play implements Screen {
         PolygonShape shape = new PolygonShape();
         shape.setAsBox(rect.width / 2 / PPM , rect.height / 2 /PPM);
 
-        body.createFixture(shape, 0.0f);
+        body.createFixture(shape, 0.0f).setUserData(this);
         shape.dispose();
     }
     private void createStaticBody(PolygonMapObject polygonObject) {
