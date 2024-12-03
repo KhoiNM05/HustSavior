@@ -114,7 +114,7 @@ public class SplashScreen implements Screen {
             case FADE_OUT:
                 if (elapsed >= FADE_DURATION) {
                     Gdx.app.log("SplashScreen", "Transitioning to Play screen");
-                    game.setScreen(new Play());
+                    game.setScreen(new MainMenuScreen(game));
                 }
                 break;
         }

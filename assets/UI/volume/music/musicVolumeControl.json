@@ -1,0 +1,47 @@
+{
+"com.badlogic.gdx.graphics.g2d.BitmapFont": {
+	"shlop_rg": {
+		"file": "shlop rg.fnt",
+		"scaledSize": -1,
+		"markupEnabled": false,
+		"flip": false
+	}
+},
+"com.badlogic.gdx.graphics.Color": {
+	"RGBA_218_0_0_255": {
+		"r": 0.85490197,
+		"g": 0,
+		"b": 0,
+		"a": 1
+	},
+	"RGBA_255_92_92_255": {
+		"r": 0.9607843,
+		"g": 0.4117647,
+		"b": 0.4117647,
+		"a": 1
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Button$ButtonStyle": {
+	"default": {
+		"up": "Speaker-2",
+		"checked": "Speaker-Crossed-1"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle": {
+	"default": {
+		"font": "shlop_rg"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle": {
+	"default": {
+		"font": "shlop_rg",
+		"fontColor": "RGBA_218_0_0_255",
+		"overFontColor": "RGBA_255_92_92_255"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.TextTooltip$TextTooltipStyle": {
+	"default": {
+		"label": "default"
+	}
+}
+}

@@ -1,0 +1,21 @@
+{
+"com.badlogic.gdx.graphics.g2d.BitmapFont": {
+	"shlop_rg": {
+		"file": "shlop rg.fnt",
+		"scaledSize": -1,
+		"markupEnabled": false,
+		"flip": false
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Button$ButtonStyle": {
+	"default": {
+		"up": "Cross",
+		"over": "cross"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle": {
+	"default": {
+		"font": "shlop_rg"
+	}
+}
+}
