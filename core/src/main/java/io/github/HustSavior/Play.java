@@ -28,6 +28,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.HustSavior.entities.Player;
+import io.github.HustSavior.entities.Bullet;
 import io.github.HustSavior.ui.PauseButton;
 
 import io.github.HustSavior.utils.GameConfig;
@@ -55,6 +56,22 @@ public class Play implements Screen {
     private final Player player;
     private final InputHandler inputHandler;
     private final World world;
+    // Bullet
+    private List<Bullet> bullets;
+    private float shootCooldown = 0.5f;
+    private float timeSinceLastShot = 0;
+    // Health bar stat
+    private Texture healthBarTexture;
+    private static final float HEALTH_BAR_WIDTH = 30f;
+    private static final float HEALTH_BAR_HEIGHT = 3f;
+    private static final float HEALTH_BAR_OFFSET_X = 6.5f;
+    private static final float HEALTH_BAR_OFFSET_Y = 37f;
+    // XP bar stat
+    private Texture xpBarTexture;
+    private static final float XP_BAR_WIDTH = 750f;
+    private static final float XP_BAR_HEIGHT = 10f;
+    private static final float XP_BAR_OFFSET_X = 25f;
+    private static final float XP_BAR_OFFSET_Y = 15f;
 
     private Stage uiStage;
     private PauseButton pauseButton;
@@ -67,18 +84,18 @@ public class Play implements Screen {
     public Play(Game game) {
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
-        
+
 
 
         camera = new OrthographicCamera();
         viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
-        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0); 
+        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
         camera.update();
-        
+
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
         gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
-        
+
         // Add debug logging before creating HighgroundManager
         Gdx.app.log("Play", "=== Map Layers Debug ===");
         if (gameMap.getTiledMap() == null) {
@@ -88,29 +105,34 @@ public class Play implements Screen {
                 Gdx.app.log("Play", "Found layer: " + layer.getName());
             }
         }
-        
+
         highgroundManager = new HighgroundManager(gameMap.getTiledMap());
         // Add debug call after initialization
         highgroundManager.debugPrintAreas();
-        
+
         createCollisionBodies();
-        
+
         player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
             500, 500, world);
         inputHandler = new InputHandler(player);
+        // New list of bullets
+        bullets = new ArrayList<>();
+        // Health bar and XP bar
+        healthBarTexture = new Texture("HP & XP/health_bar.png");
+        xpBarTexture = new Texture("HP & XP/xp_bar.png");
 
-        
+
         // Add UI stage and pause button
         uiStage = new Stage(new ScreenViewport());
         pauseButton = new PauseButton(uiStage, game, this);
         uiStage.addActor(pauseButton);
-        
+
         // Add UI stage to input multiplexer
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(uiStage);
         multiplexer.addProcessor(inputHandler);
         Gdx.input.setInputProcessor(multiplexer);
-        
+
         // Initialize transparency manager with map layers
         transparencyManager = new BuildingTransparencyManager(
             gameMap.getTiledMap(),
@@ -160,9 +182,9 @@ public class Play implements Screen {
             Gdx.app.error("Play", "Collisions layer not found in map!");
             return;
         }
-        
+
         for (MapObject object : gameMap.getTiledMap().getLayers().get("collisions").getObjects()) {
-            if (object instanceof RectangleMapObject) { 
+            if (object instanceof RectangleMapObject) {
                 collisionBodyFactory.createStaticBody((RectangleMapObject) object);
             } else if (object instanceof PolygonMapObject) {
                 collisionBodyFactory.createStaticBody((PolygonMapObject) object);
@@ -185,10 +207,10 @@ public class Play implements Screen {
             world.step(WORLD_STEP_TIME, 6, 2);
         }
         drawGame();
-        
+
         uiStage.act(delta);
         uiStage.draw();
-        
+
         // Update building transparency
         transparencyManager.update(player);
     }
@@ -200,14 +222,18 @@ public class Play implements Screen {
 
     private void updateGame(float delta) {
         inputHandler.update(delta);
+        timeSinceLastShot += delta;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            shootBullet();
+        }
+        updateCamera();
 
-     
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
         Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
         // Convert back to Box2D coordinates (divide by PPM) and set the body position
         player.getBody().setTransform(adjustedPos.x / PPM, adjustedPos.y / PPM, player.getBody().getAngle());
-        
+    }
 
 
     private void shootBullet() {
@@ -300,7 +326,7 @@ public class Play implements Screen {
         batch.setColor(1, 1, 1, 1); // Reset color to white
         batch.draw(xpBarTexture, xpBarX, xpBarY, XP_BAR_WIDTH * xpPercentage, XP_BAR_HEIGHT);
         renderer.getBatch().end();
-        
+
         // Draw debug outline
         shapeRenderer.setProjectionMatrix(camera.combined);
         player.drawDebug(shapeRenderer);
@@ -321,6 +347,8 @@ public class Play implements Screen {
         gameMap.dispose();
         player.getTexture().dispose();
         world.dispose();
+        healthBarTexture.dispose();
+        xpBarTexture.dispose();
         uiStage.dispose();
         shapeRenderer.dispose();
 
