@@ -16,9 +16,11 @@ public class HustSavior extends Game {
 
     @Override
     public void create() {
+
         batch = new SpriteBatch();
         ResolutionManager.getInstance();
         setScreen(new MainMenuScreen(this));
+
     }
     @Override
     public void resize(int width, int height){

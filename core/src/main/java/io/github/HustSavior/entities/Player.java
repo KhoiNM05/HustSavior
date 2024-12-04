@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 
 
+import io.github.HustSavior.Play;
 public class Player extends Sprite {
     private static final float PPM = GameConfig.PPM;
     private static final float ANIMATION_SPEED = 0.2f;
@@ -24,6 +25,11 @@ public class Player extends Sprite {
     private static final float FRICTION = 0.4f;
     private static final float RESTITUTION = 0.0f; // Reduced bounce
 
+    private float health;
+    private float maxHealth;
+    private float xp;
+    private float maxXp;
+
     public final Animation<TextureRegion> walkLeft;
     public final Animation<TextureRegion> walkRight;
     private final Body body;
@@ -33,11 +39,31 @@ public class Player extends Sprite {
         setPosition(x / GameConfig.PPM, y / GameConfig.PPM);
 
         // Initialize animations
-        walkLeft = createAnimation("sprites/WalkRight");
         walkRight = createAnimation("sprites/WalkRight");
+        walkLeft = createAnimation("sprites/WalkLeft");
 
         // Initialize physics body
         body = createBody(world, x / GameConfig.PPM, y / GameConfig.PPM);
+        this.health = 100;
+        this.maxHealth = 100;
+        this.xp = 0;
+        this.maxXp = 100;
+    }
+
+    public float getHealth() {
+        return health;
+    }
+
+    public float getMaxHealth() {
+        return maxHealth;
+    }
+
+    public float getXp() {
+        return xp;
+    }
+
+    public float getMaxXp() {
+        return maxXp;
     }
 
     private Animation<TextureRegion> createAnimation(String basePath) {
@@ -79,8 +105,10 @@ public class Player extends Sprite {
         fixtureDef.restitution = RESTITUTION;
 
         // Set collision filtering
+
         fixtureDef.filter.categoryBits = 0x0002;
         fixtureDef.filter.maskBits = 0x0001;
+
 
         playerBody.createFixture(fixtureDef);
         shape.dispose();
@@ -95,7 +123,6 @@ public class Player extends Sprite {
         float y = body.getPosition().y * GameConfig.PPM - getHeight() / 2;
         setPosition(x, y);
     }
-
     public float getSpeed() {
         return MOVEMENT_SPEED;
     }
