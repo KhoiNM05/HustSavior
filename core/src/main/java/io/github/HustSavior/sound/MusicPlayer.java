@@ -8,6 +8,8 @@ public class MusicPlayer {
     private Music currentMusic;
     private boolean isLooping = true;
     
+    private static final String MAIN_MENU_MUSIC = "sound/main_menu_sound.mp3";
+    
     private MusicPlayer() {}
     
     public static MusicPlayer getInstance() {
@@ -67,5 +69,9 @@ public class MusicPlayer {
         if (currentMusic != null) {
             currentMusic.setLooping(looping);
         }
+    }
+    
+    public void playMainMenuMusic() {
+        playMusic(MAIN_MENU_MUSIC);
     }
 } 

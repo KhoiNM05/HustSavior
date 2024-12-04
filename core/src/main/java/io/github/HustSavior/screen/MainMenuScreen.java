@@ -12,6 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.HustSavior.HustSavior;
+import io.github.HustSavior.sound.MusicPlayer;
+
 import java.util.ArrayList;
 
 
@@ -20,7 +22,7 @@ public class MainMenuScreen implements Screen {
     private Texture background;
     private Stage stage;
     private ArrayList<Button> buttons ;
-    private String SPLASH_PATH = "sprites/splash.png";
+    private String SPLASH_PATH = "sprites/Hust1.png";
     private boolean  useBlackScreen = false;
     public MainMenuScreen(Game game) {
         this.game = game;
@@ -33,6 +35,9 @@ public class MainMenuScreen implements Screen {
         Gdx.input.setInputProcessor(stage);
         initializeButtons();
         loadButtons();
+        
+        // Start playing main menu music
+        MusicPlayer.getInstance().playMainMenuMusic();
     }
 
     private void loadBackGround(){
@@ -80,8 +85,29 @@ public class MainMenuScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
+        float backgroundAspect = (float)background.getWidth() / background.getHeight();
+        float screenAspect = screenWidth / screenHeight;
+        
+        float renderWidth = screenWidth;
+        float renderHeight = screenHeight;
+        float x = 0, y = 0;
+        
+        if (screenAspect > backgroundAspect) {
+            // Screen is wider than background - fill width and overflow height
+            renderWidth = screenWidth;
+            renderHeight = screenWidth / backgroundAspect;
+            y = -(renderHeight - screenHeight) / 2;
+        } else {
+            // Screen is taller than background - fill height and overflow width
+            renderHeight = screenHeight;
+            renderWidth = screenHeight * backgroundAspect;
+            x = -(renderWidth - screenWidth) / 2;
+        }
+
         ((HustSavior)game).batch.begin();
-        ((HustSavior)game).batch.draw(background, 0, 0);
+        ((HustSavior)game).batch.draw(background, x, y, renderWidth, renderHeight);
         ((HustSavior)game).batch.end();
 
         stage.act(Math.min(Gdx.graphics.getDeltaTime(), 1 / 30f));
@@ -110,6 +136,8 @@ public class MainMenuScreen implements Screen {
 
     @Override
     public void hide() {
+        // Stop the music when the screen is hidden
+        MusicPlayer.getInstance().stop();
     }
 
     @Override
