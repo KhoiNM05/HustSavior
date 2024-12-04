@@ -1,0 +1,29 @@
+
+play.png
+size: 256, 256
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+Default
+  rotate: false
+  xy: 1, 1
+  size: 160, 85
+  orig: 160, 85
+  offset: 0, 0
+  index: -1
+Play
+  rotate: false
+  xy: 1, 1
+  size: 160, 85
+  split: 0, 0, 0, 2
+  pad: 0, 0, 0, 0
+  orig: 160, 85
+  offset: 0, 0
+  index: -1
+Hover
+  rotate: false
+  xy: 1, 88
+  size: 160, 85
+  orig: 160, 85
+  offset: 0, 0
+  index: -1

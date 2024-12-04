@@ -1,0 +1,20 @@
+
+settingsWindow.png
+size: 1024, 1024
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+shlop rg
+  rotate: false
+  xy: 1, 87
+  size: 506, 160
+  orig: 506, 160
+  offset: 0, 0
+  index: -1
+sw
+  rotate: false
+  xy: 1, 249
+  size: 900, 650
+  orig: 900, 650
+  offset: 0, 0
+  index: -1

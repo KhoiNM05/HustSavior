@@ -1,0 +1,38 @@
+
+settingsButton.png
+size: 1024, 1024
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+gear
+  rotate: false
+  xy: 1, 448
+  size: 360, 360
+  orig: 360, 360
+  offset: 0, 0
+  index: -1
+gear2
+  rotate: false
+  xy: 1, 86
+  size: 360, 360
+  split: 0, 0, 0, 3
+  pad: 65, 51, 45, 72
+  orig: 360, 360
+  offset: 0, 0
+  index: -1
+hoverGear
+  rotate: false
+  xy: 1, 1
+  size: 80, 83
+  split: 0, 0, 0, 3
+  pad: 0, 0, 0, 0
+  orig: 80, 83
+  offset: 0, 0
+  index: -1
+settingsSkin
+  rotate: false
+  xy: 363, 725
+  size: 80, 83
+  orig: 80, 83
+  offset: 0, 0
+  index: -1

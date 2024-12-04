@@ -1,0 +1,22 @@
+
+resumeButton.png
+size: 128, 128
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+resume
+  rotate: false
+  xy: 1, 1
+  size: 80, 83
+  orig: 80, 83
+  offset: 0, 0
+  index: -1
+resume9
+  rotate: false
+  xy: 1, 1
+  size: 80, 83
+  split: 0, 0, 0, 3
+  pad: 0, 0, 0, 0
+  orig: 80, 83
+  offset: 0, 0
+  index: -1

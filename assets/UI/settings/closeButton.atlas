@@ -1,0 +1,29 @@
+
+closeButton.png
+size: 512, 512
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+shlop rg
+  rotate: false
+  xy: 1, 345
+  size: 506, 160
+  orig: 506, 160
+  offset: 0, 0
+  index: -1
+Cross
+  rotate: false
+  xy: 1, 287
+  size: 56, 56
+  orig: 56, 56
+  offset: 0, 0
+  index: -1
+cross
+  rotate: false
+  xy: 1, 287
+  size: 56, 56
+  split: 0, 0, 0, 0
+  pad: 3, 1, 3, 4
+  orig: 56, 56
+  offset: 0, 0
+  index: -1

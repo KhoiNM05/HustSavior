@@ -1,0 +1,22 @@
+
+pauseButton.png
+size: 128, 128
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+pause
+  rotate: false
+  xy: 1, 1
+  size: 80, 83
+  orig: 80, 83
+  offset: 0, 0
+  index: -1
+pause9
+  rotate: false
+  xy: 1, 1
+  size: 80, 83
+  split: 0, 0, 0, 4
+  pad: 0, 0, 0, 0
+  orig: 80, 83
+  offset: 0, 0
+  index: -1

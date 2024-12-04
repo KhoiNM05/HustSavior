@@ -1,0 +1,13 @@
+
+resolutionControl.png
+size: 512, 512
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+shlop rg
+  rotate: false
+  xy: 1, 345
+  size: 506, 160
+  orig: 506, 160
+  offset: 0, 0
+  index: -1
