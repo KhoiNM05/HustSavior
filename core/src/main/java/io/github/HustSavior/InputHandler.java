@@ -30,11 +30,11 @@ public class InputHandler extends InputAdapter {
     @Override
     public boolean keyUp(int keycode) {
         switch (keycode) {
-            case Input.Keys.A: 
+            case Input.Keys.A:
                 left = false;
                 facingLeft = true;
                 break;
-            case Input.Keys.D: 
+            case Input.Keys.D:
                 right = false;
                 facingLeft = false;
                 break;
