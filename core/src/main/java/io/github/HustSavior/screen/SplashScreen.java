@@ -18,7 +18,7 @@ import io.github.HustSavior.utils.GameConfig;
 public class SplashScreen implements Screen {
     private static final float FADE_DURATION = 1.0f;
     private static final float DISPLAY_DURATION = 2.0f;
-    private static final String SPLASH_PATH = "sprites/splash.jpg";
+    private static final String SPLASH_PATH = "sprites/splash.png";
 
 
     private final HustSavior game;
