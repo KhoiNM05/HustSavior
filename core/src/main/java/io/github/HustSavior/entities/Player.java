@@ -20,8 +20,8 @@ public class Player extends Sprite {
     private static final float FRICTION = 0.4f;
     private static final float RESTITUTION = 0.0f; // Reduced bounce
 
-    public final Animation<TextureRegion> walkLeft;
-    public final Animation<TextureRegion> walkRight;
+    public final Animation<TextureRegion> walkRight, walkLeft;
+    private static boolean facingLeft;
     private final Body body;
 
     public Player(Sprite sprite, float x, float y, World world) {
@@ -29,7 +29,7 @@ public class Player extends Sprite {
         setPosition(x / GameConfig.PPM, y / GameConfig.PPM);
 
         // Initialize animations
-        walkLeft = createAnimation("sprites/WalkRight");
+        walkLeft=createAnimation("sprites/WalkRight");
         walkRight = createAnimation("sprites/WalkRight");
 
         // Initialize physics body
@@ -86,5 +86,15 @@ public class Player extends Sprite {
         return body;
     }
 
+    public void acquireEffect(int id){
+        switch(id){
+            case 1: break;
+            default: ;
+        }
+
+    }
+
+    public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}
+    public boolean isFacingLeft(){return facingLeft;}
     public float getPPM(){return PPM;}
 }

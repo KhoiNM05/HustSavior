@@ -51,10 +51,11 @@ public class Play implements Screen {
         viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
         camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
         camera.update();
-        world = setupWorld();
+        assetSetter= new AssetSetter();
+        world = setupWorld(assetSetter);
         player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
                           500, 500, world);
-        assetSetter= new AssetSetter();
+
         inputHandler = new InputHandler(player);
         skillManager= new SkillManager(player, world);
         skillManager.activateSkills(1);
@@ -69,9 +70,9 @@ public class Play implements Screen {
         return cam;
     }
 
-    private World setupWorld() {
+    private World setupWorld(AssetSetter assetSetter) {
         World world = new World(new Vector2(0, 0), true);
-        world.setContactListener(new CollisionListener());
+        world.setContactListener(new CollisionListener(assetSetter));
         return world;
     }
 
@@ -183,9 +184,9 @@ public class Play implements Screen {
         renderer.setView(camera);
         renderer.render();
         renderer.getBatch().begin();
-        player.draw((SpriteBatch)renderer.getBatch());
         skillManager.drawSkills((SpriteBatch)renderer.getBatch());
         assetSetter.drawObject((SpriteBatch) renderer.getBatch());
+        player.draw((SpriteBatch)renderer.getBatch());
         renderer.getBatch().end();
     }
 

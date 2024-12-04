@@ -19,11 +19,17 @@ public class InputHandler extends InputAdapter {
     @Override
     public boolean keyDown(int keycode) {
         switch (keycode) {
-            case Input.Keys.A: left = true; break;
-            case Input.Keys.D: right = true; break;
+            case Input.Keys.A: left = true;
+                facingLeft = true;
+                break;
+
+            case Input.Keys.D: right = true;
+                facingLeft = false;
+            break;
             case Input.Keys.W: up = true; break;
             case Input.Keys.S: down = true; break;
         }
+        player.setFacingDirection(facingLeft);
         return true;
     }
 
@@ -32,11 +38,9 @@ public class InputHandler extends InputAdapter {
         switch (keycode) {
             case Input.Keys.A:
                 left = false;
-                facingLeft = true;
                 break;
             case Input.Keys.D:
                 right = false;
-                facingLeft = false;
                 break;
             case Input.Keys.W: up = false; break;
             case Input.Keys.S: down = false; break;

@@ -3,9 +3,15 @@ package io.github.HustSavior.utils;
 import com.badlogic.gdx.physics.box2d.*;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.skills.Calculus;
+import items.AssetSetter;
+import items.CalcBook;
 import items.Item;
 
 public class CollisionListener implements ContactListener {
+    AssetSetter assetSetter;
+    public CollisionListener(AssetSetter assetSetter){
+        this.assetSetter=assetSetter;
+    }
     @Override
     public void beginContact(Contact contact) {
         // Handle the beginning of a collision
@@ -15,13 +21,10 @@ public class CollisionListener implements ContactListener {
         Object userDataA = fixtureA.getUserData();
         Object userDataB = fixtureB.getUserData();
 
-        if (userDataB instanceof Player && userDataA instanceof Calculus){
-            System.out.println("Collision with Skills");
+        if (userDataA instanceof Item && userDataB instanceof Player){
+            assetSetter.objectAcquired((Item)userDataA);
         }
 
-        else if (userDataA instanceof Player && userDataB instanceof Item){
-            System.out.println("Interacting objs");
-        }
     }
 
     @Override

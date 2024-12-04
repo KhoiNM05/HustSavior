@@ -1,5 +1,6 @@
 package items;
 
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -18,10 +19,14 @@ public class AssetSetter {
 
     public void createObject(int x, int y, int id, float PPM, World world){
         switch (id) {
-            case 1: objectList.add(new CalcBook(x, y, PPM, world));
+            case 1: objectList.add(new CalcBook(new Sprite(new Texture("item/calculus1.jpg")), x, y, PPM, world));
                     break;
             default:
         }
+    }
+
+    public void objectAcquired(Item item){
+        objectList.remove(item);
     }
 
     public void drawObject(SpriteBatch batch){

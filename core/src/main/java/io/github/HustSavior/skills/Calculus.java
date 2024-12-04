@@ -15,7 +15,6 @@ public class Calculus extends Sprite {
     CooldownController cd;
     final static float DEFAULT_COOLDOWN=2.0f;
     private float stateTime=0;
-    private float animationTime;
     private float getAnimationTime;
 
     private World world;
@@ -23,7 +22,7 @@ public class Calculus extends Sprite {
 
     private float castingX;
     private float castingY;
-
+    private boolean castDirectionLeft;
     Player player;
 
     public Calculus(Sprite sprite, Player player, World world){
@@ -51,34 +50,49 @@ public class Calculus extends Sprite {
         super.draw(batch);
     }
 
-    public void update(float delta){
-            // Start animation if cooldown is ready
-            if (isReady()) {
-                // Play animation
-                setRegion(cast.getKeyFrame(stateTime, false)); // 'false' ensures animation stops at the last frame
-                if (stateTime<=0) {
-                    // Get initial position of skill shots
-                    castingX = player.getX()+2*player.getRegionWidth()/2;
-                    castingY = player.getY();
-                    hitbox=createHitbox((int)castingX, (int)castingY, player.getPPM(), world);
-                }
-                setPosition(castingX, castingY);
-
-                // Check if animation has finished
-                if (stateTime >= getAnimationTime) {
-                    cd.resetCooldown(); // Reset cooldown only after animation completes
-                    world.destroyBody(hitbox);
-                    stateTime = 0; // Reset stateTime for the next animation cycle
-                }
-                else{
-                    stateTime += delta;
-                }
-            } else {
-                cd.cooldownTimer(delta); // Update cooldown
+    public void update(float delta) {
+        // Start animation if cooldown is ready
+        if (isReady()) {
+            // Capture the player's direction at the start of the skill
+            if (stateTime == 0) {
+                castDirectionLeft = player.isFacingLeft(); // Store the facing direction
+                if (!castDirectionLeft) castingX = player.getX() + player.getRegionWidth() / 2;
+                else castingX= player.getX() - player.getRegionWidth()/2;
+                castingY = player.getY();
+                hitbox = createHitbox((int) castingX, (int) castingY, player.getPPM(), world);
             }
 
+            // Get the current frame of the animation
+            TextureRegion frame = cast.getKeyFrame(stateTime, false);
 
+            // Flip the frame based on the captured direction
+            if (castDirectionLeft && !frame.isFlipX()) {
+                frame.flip(true, false);
+            }
+            else if (!castDirectionLeft && frame.isFlipX()){
+                frame.flip(true, false);
+            }
 
+            setRegion(frame); // Set the flipped or unflipped frame to the sprite
+
+            setPosition(castingX, castingY);
+
+            // Check if animation has finished
+            if (stateTime >= getAnimationTime) {
+                cd.resetCooldown(); // Reset cooldown only after animation completes
+                if (hitbox != null) {
+                    world.destroyBody(hitbox);
+                    hitbox = null;
+                }
+                stateTime = 0;// Reset stateTime for the next animation cycle
+                if(frame.isFlipX()) flip(true, false);
+            } else {
+                stateTime += delta;
+            }
+
+        } else {
+            cd.cooldownTimer(delta); // Update cooldown
+        }
     }
 
     public Body createHitbox(int x, int y, float PPM, World world){
