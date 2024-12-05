@@ -5,39 +5,31 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.badlogic.gdx.maps.MapLayer;
-import com.badlogic.gdx.Application;
-
+import io.github.HustSavior.entities.NormalMonster;
 import io.github.HustSavior.entities.Player;
-import io.github.HustSavior.bullet.Bullet;
-import io.github.HustSavior.ui.PauseButton;
+import io.github.HustSavior.utils.CollisionListener;
 import io.github.HustSavior.utils.GameConfig;
-import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
-import io.github.HustSavior.collision.CollisionBodyFactory;
-import io.github.HustSavior.collision.CollisionListener;
-import io.github.HustSavior.map.GameMap;
-import io.github.HustSavior.map.HighgroundManager;
-import io.github.HustSavior.bullet.BulletManager;
+import com.badlogic.gdx.maps.tiled.objects.TiledMapTileMapObject;
 
 public class Play implements Screen {
-    private final float PPM = GameConfig.PPM;
-//    private static final float INITIAL_ZOOM = -1.2f;
+    private static final float PPM = GameConfig.PPM;
+    private static final float INITIAL_ZOOM = -1.2f;
     private static final float ZOOM_SPEED = 0.02f;
     private static final float MIN_ZOOM = 0.1f;
     private static final float MAX_ZOOM = 10f;
@@ -45,142 +37,141 @@ public class Play implements Screen {
 
     private final OrthographicCamera camera;
     private final Viewport viewport;
-    private final GameMap gameMap;
+    private final TiledMap map;
+    private final OrthogonalTiledMapRenderer renderer;
     private final Player player;
-    private BulletManager bulletManager;
-    private final InputHandler inputHandler;
+    private final NormalMonster normalMonster;
     private final World world;
+    private final InputHandler inputHandler;
 
-    private Stage uiStage;
-    private PauseButton pauseButton;
-    private boolean isPaused = false;
-    private BuildingTransparencyManager transparencyManager;
-    private ShapeRenderer shapeRenderer;
-    private CollisionBodyFactory collisionBodyFactory;
-    private HighgroundManager highgroundManager;
+    private final Array<NormalMonster> monsters = new Array<>();
+    public Play() {
+        // Load map
+        map = new TmxMapLoader().load("map/map.tmx");
+        if (map == null) {
+            throw new RuntimeException("Failed to load map");
+        }
+        renderer = new OrthogonalTiledMapRenderer(map);
 
-    public Play(Game game) {
-        // Set logging level to show debug messages
-        Gdx.app.setLogLevel(Application.LOG_DEBUG);
-
+        // Setup camera
         camera = new OrthographicCamera();
         viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
         camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
         camera.update();
 
+        // Setup physics world
         world = setupWorld();
-        collisionBodyFactory = new CollisionBodyFactory(world, PPM);
-        gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
 
-        // Add debug logging before creating HighgroundManager
-        Gdx.app.log("Play", "=== Map Layers Debug ===");
-        if (gameMap.getTiledMap() == null) {
-            Gdx.app.error("Play", "TiledMap is null!");
-        } else {
-            for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
-                Gdx.app.log("Play", "Found layer: " + layer.getName());
-            }
+        // Initialize player
+        player = new Player("sprites/WalkRight1.png", 500, 500, world);
+        if (player == null || !player.isTextureLoaded()) {
+            Gdx.app.error("Play", "Player texture loading failed. Check file paths.");
+            throw new RuntimeException("Failed to initialize player");
         }
 
-        highgroundManager = new HighgroundManager(gameMap.getTiledMap());
-        // Add debug call after initialization
-        highgroundManager.debugPrintAreas();
-
-        createCollisionBodies();
-
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
-                500, 500, world);
+        // Initialize monster with sprite sheet
+        normalMonster = new NormalMonster(300, 300, 100, 10, 5, "sprites/blueMonster.png");
+        if (normalMonster == null) {
+            throw new RuntimeException("Failed to initialize monster");
+        }
+        normalMonster.createBody(world);
         inputHandler = new InputHandler(player);
-        bulletManager = new BulletManager(world, player);
 
-        // Add UI stage and pause button
-        uiStage = new Stage(new ScreenViewport());
-        pauseButton = new PauseButton(uiStage, game, this);
-        uiStage.addActor(pauseButton);
-
-        // Add UI stage to input multiplexer
-        InputMultiplexer multiplexer = new InputMultiplexer();
-        multiplexer.addProcessor(uiStage);
-        multiplexer.addProcessor(inputHandler);
-        Gdx.input.setInputProcessor(multiplexer);
-
-        // Initialize transparency manager with map layers
-        transparencyManager = new BuildingTransparencyManager(
-                gameMap.getTiledMap(),
-                gameMap.getLayer("D3"),
-                gameMap.getLayer("D5"),
-                gameMap.getLayer("D35"),
-                gameMap.getLayer("Library"),
-                gameMap.getLayer("Roof"),
-                gameMap.getLayer("Parking"));
-        shapeRenderer = new ShapeRenderer();
+        // Setup collision bodies from map
+        createCollisionBodies();
+        spawnMonsters(5);
     }
-
-//    private OrthographicCamera setupCamera() {
-//        OrthographicCamera cam = new OrthographicCamera();
-//        cam.zoom = INITIAL_ZOOM;
-//        cam.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-//        return cam;
-//    }
 
     private World setupWorld() {
         World world = new World(new Vector2(0, 0), true);
-        world.setContactListener(new CollisionListener() {
-            @Override
-            public void beginContact(Contact contact) {
-                super.beginContact(contact);
-                // Manage collision for bullet
-                handleBulletCollision(contact);
-            }
-        });
+        world.setContactListener(new CollisionListener());
         return world;
     }
 
-    private void handleBulletCollision(Contact contact) {
-        Fixture fixtureA = contact.getFixtureA();
-        Fixture fixtureB = contact.getFixtureB();
-        if (fixtureA.getBody().getUserData() instanceof Bullet) {
-            ((Bullet) fixtureA.getBody().getUserData()).incrementCollisionCount();
-        } else if (fixtureB.getBody().getUserData() instanceof Bullet) {
-            ((Bullet) fixtureB.getBody().getUserData()).incrementCollisionCount();
+    private void spawnMonsters(int count) {
+        float radius = 200f; // Bán kính vòng tròn spawn quái vật
+        for (int i = 0; i < count; i++) {
+            // Tính vị trí x, y dựa trên góc
+            float angle = MathUtils.random(0, 360);
+            float x = player.getX() + MathUtils.cosDeg(angle) * radius;
+            float y = player.getY() + MathUtils.sinDeg(angle) * radius;
+
+            // Tạo quái vật
+            NormalMonster monster = new NormalMonster(x, y, 100, 10, 5, "sprites/blueMonster.png");
+            monster.createBody(world); // Tạo body vật lý
+            monsters.add(monster); // Thêm vào danh sách quản lý
         }
     }
 
     private void createCollisionBodies() {
-        if (gameMap.getTiledMap().getLayers().get("collisions") == null) {
-            Gdx.app.error("Play", "Collisions layer not found in map!");
-            return;
-        }
+        // Lấy object group từ map
+        MapObjects objects = map.getLayers().get("collisions").getObjects();
 
-        for (MapObject object : gameMap.getTiledMap().getLayers().get("collisions").getObjects()) {
+        for (MapObject object : objects) {
             if (object instanceof RectangleMapObject) {
-                collisionBodyFactory.createStaticBody((RectangleMapObject) object);
+                createStaticBody((RectangleMapObject) object); // Xử lý Rectangle
             } else if (object instanceof PolygonMapObject) {
-                collisionBodyFactory.createStaticBody((PolygonMapObject) object);
+                createStaticBody((PolygonMapObject) object); // Xử lý Polygon
+            } else if (object.getProperties().containsKey("gid")) {
+                Gdx.app.log("Play", "Skipping TileMap Object with gid: " + object.getProperties().get("gid"));
+            } else {
+                Gdx.app.log("Play", "Skipping unsupported object type: " + object.getClass().getName());
+            }
+        }
+    }
+
+    private void createStaticBody(RectangleMapObject rectangleObject) {
+        Rectangle rect = rectangleObject.getRectangle();
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.StaticBody;
+        bodyDef.position.set((rect.x + rect.width / 2) / PPM, (rect.y + rect.height / 2) / PPM);
+
+        Body body = world.createBody(bodyDef);
+        PolygonShape shape = new PolygonShape();
+        shape.setAsBox(rect.width / 2 / PPM, rect.height / 2 / PPM);
+
+        body.createFixture(shape, 0.0f);
+        shape.dispose();
+    }
+
+    private void createStaticBody(PolygonMapObject polygonObject) {
+        try {
+            Polygon polygon = polygonObject.getPolygon();
+            float[] vertices = polygon.getTransformedVertices();
+            Vector2[] worldVertices = new Vector2[vertices.length / 2];
+            for (int i = 0; i < vertices.length / 2; i++) {
+                worldVertices[i] = new Vector2(vertices[i * 2] / PPM, vertices[i * 2 + 1] / PPM);
             }
 
+            BodyDef bodyDef = new BodyDef();
+            bodyDef.type = BodyDef.BodyType.StaticBody;
+
+            Body body = world.createBody(bodyDef);
+            PolygonShape shape = new PolygonShape();
+            shape.set(worldVertices);
+
+            FixtureDef fixtureDef = new FixtureDef();
+            fixtureDef.shape = shape;
+            fixtureDef.density = 1.0f;
+
+            body.createFixture(fixtureDef);
+            shape.dispose();
+        } catch (Exception e) {
+            Gdx.app.error("Play", "Failed to create polygon body", e);
         }
     }
 
     @Override
     public void show() {
-        // Gdx.input.setInputProcessor(inputHandler);
+        Gdx.input.setInputProcessor(inputHandler);
     }
 
     @Override
     public void render(float delta) {
         clearScreen();
-        if (!isPaused) {
-            updateGame(delta);
-            world.step(WORLD_STEP_TIME, 6, 2);
-        }
+        updateGame(delta);
         drawGame();
-
-        uiStage.act(delta);
-        uiStage.draw();
-
-        // Update building transparency
-        transparencyManager.update(player);
+        world.step(WORLD_STEP_TIME, 6, 2);
     }
 
     private void clearScreen() {
@@ -189,41 +180,21 @@ public class Play implements Screen {
     }
 
     private void updateGame(float delta) {
-        inputHandler.update(delta);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            bulletManager.shootBullet();
+        player.update(delta);
+        for (NormalMonster monster : monsters) {
+            monster.update(delta, player);
         }
         updateCamera();
-        bulletManager.update(delta);
-
-        // Update player position based on highground
-        Vector2 currentPos = player.getBody().getPosition();
-        Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
-        // Convert back to Box2D coordinates (divide by PPM) and set the body position
-        player.getBody().setTransform(adjustedPos.x / PPM, adjustedPos.y / PPM, player.getBody().getAngle());
     }
 
     private void updateCamera() {
         camera.position.set(
-                player.getX() + player.getWidth() / 2,
-                player.getY() + player.getHeight() / 2,
-                0);
+            player.getX() + player.getWidth() / 2,
+            player.getY() + player.getHeight() / 2,
+            0
+        );
         handleZoom();
         camera.update();
-    }
-
-    private void drawGame() {
-        OrthogonalTiledMapRenderer renderer = gameMap.getRenderer();
-        renderer.setView(camera);
-        renderer.render();
-        renderer.getBatch().begin();
-        player.draw((SpriteBatch) renderer.getBatch(), camera);
-        bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
-        renderer.getBatch().end();
-
-        // Draw debug outline
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        player.drawDebug(shapeRenderer);
     }
 
     private void handleZoom() {
@@ -236,39 +207,50 @@ public class Play implements Screen {
         camera.zoom = Math.max(MIN_ZOOM, Math.min(camera.zoom, MAX_ZOOM));
     }
 
-    @Override
-    public void dispose() {
-        gameMap.dispose();
-        player.getTexture().dispose();
-        world.dispose();
-        uiStage.dispose();
-        shapeRenderer.dispose();
+    private void drawGame() {
+        if (renderer == null || renderer.getBatch() == null) {
+            Gdx.app.error("Play", "Renderer or batch is null");
+            return;
+        }
+        renderer.setView(camera);
+        renderer.render();
+        renderer.getBatch().begin();
+
+        // Vẽ người chơi
+        if (player != null) {
+            player.draw(renderer.getBatch());
+        }
+
+        // Draw monsters with null checks
+        for (NormalMonster monster : monsters) {
+            if (monster != null) {
+                monster.draw(renderer.getBatch());
+            }
+        }
+
+        renderer.getBatch().end();
     }
 
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
-        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
-        camera.update();
-        uiStage.getViewport().update(width, height, true);
-        pauseButton.updatePosition();
     }
 
     @Override
-    public void hide() {
-        dispose();
-    }
+    public void pause() {}
 
     @Override
-    public void pause() {
-    }
+    public void resume() {}
 
     @Override
-    public void resume() {
-    }
+    public void hide() {}
 
-    public void setPaused(boolean paused) {
-        this.isPaused = paused;
+    @Override
+    public void dispose() {
+        map.dispose();
+        renderer.dispose();
+        player.dispose();
+        normalMonster.dispose();
+        world.dispose();
     }
-
 }

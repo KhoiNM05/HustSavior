@@ -2,7 +2,7 @@ package io.github.HustSavior.screen;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-// import com.badlogic.gdx.ai.fsm.State;
+import com.badlogic.gdx.ai.fsm.State;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -18,7 +18,7 @@ import io.github.HustSavior.utils.GameConfig;
 public class SplashScreen implements Screen {
     private static final float FADE_DURATION = 1.0f;
     private static final float DISPLAY_DURATION = 2.0f;
-    private static final String SPLASH_PATH = "sprites/splash.png";
+    private static final String SPLASH_PATH = "sprites/splash.jpg";
 
 
     private final HustSavior game;
@@ -114,7 +114,7 @@ public class SplashScreen implements Screen {
             case FADE_OUT:
                 if (elapsed >= FADE_DURATION) {
                     Gdx.app.log("SplashScreen", "Transitioning to Play screen");
-                    game.setScreen(new MainMenuScreen(game));
+                    game.setScreen(new Play());
                 }
                 break;
         }
