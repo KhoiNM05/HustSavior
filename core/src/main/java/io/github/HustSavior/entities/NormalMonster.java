@@ -12,19 +12,17 @@ import io.github.HustSavior.utils.GameConfig;
 
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
-public class NormalMonster extends Sprite {
+public class NormalMonster extends Sprite implements MonsterBehavior{
 
     // Monster attributes
-    private int hp;
-    private int attack;
-    private int speed;
+    private float hp;
+    private float attack;
+    private float speed;
     private String spriteSheetPath;
     // Animation-related attributes
     private Texture spriteSheet;
-    private Animation<TextureRegion> walkAnimation;
-    private Animation<TextureRegion> attackAnimation;
+    private Animation<TextureRegion> movingAnimation;
     private Animation<TextureRegion> hittedAnimation;
-
     private float stateTime = 0f;
     private Vector2 knockbackVector = new Vector2();
     private static final float KNOCKBACK_FORCE = 150f;
@@ -43,8 +41,7 @@ public class NormalMonster extends Sprite {
     private boolean isHitted = false;
 
     // Constructor
-    public NormalMonster(float x, float y, int hp, int attack, int speed, String spriteSheetPath) {
-
+    public NormalMonster(String spriteSheetPath, float x, float y, World world) {
         this.hp = hp;
         this.attack = attack;
         this.speed = speed;
@@ -63,9 +60,10 @@ public class NormalMonster extends Sprite {
             Gdx.app.error("NormalMonster", "Failed to load texture: " + spriteSheetPath, e);
         }
 
+        Texture spriteSheet = new Texture(Gdx.files.internal(spriteSheetPath));
+        movingAnimation = extractAnimation(spriteSheet, 0, 8, 0.1f);  // Hàng 0: MOVING
+        hittedAnimation = extractAnimation(spriteSheet, 4, 4, 0.2f);
     }
-
-
 
     private Animation<TextureRegion> extractAnimation(Texture spriteSheet, int row, int frameCount, float frameDuration) {
         TextureRegion[][] tmpFrames = TextureRegion.split(spriteSheet,
@@ -82,23 +80,6 @@ public class NormalMonster extends Sprite {
         return new Animation<>(frameDuration, animationFrames);
     }
 
-
-//    // Initialize animations
-//    private void initializeAnimations(String spritePath) {
-//        spriteSheet = new Texture(Gdx.files.internal(spritePath));
-//
-//        TextureRegion[][] tmpFrames = TextureRegion.split(spriteSheet,
-//            spriteSheet.getWidth() / 8,
-//            spriteSheet.getHeight() / 6
-//        );
-//
-//        // Initialize animations (example, you should adjust based on your sprite sheet)
-//        walkAnimationRight = new Animation<>(0.1f, tmpFrames[0]);
-//        walkAnimationLeft = new Animation<>(0.1f, tmpFrames[1]);
-//        hittedAnimationRight = new Animation<>(0.1f, tmpFrames[2]);
-//        hittedAnimationLeft = new Animation<>(0.1f, tmpFrames[3]);
-//    }
-
     private void initializeAnimations() {
         if (spriteSheet == null) {
             Gdx.app.error("NormalMonster", "Sprite sheet is null, cannot initialize animations");
@@ -106,15 +87,13 @@ public class NormalMonster extends Sprite {
         }
 
         try {
-            walkAnimation = extractAnimation(spriteSheet, 0, 8, 0.1f); // Hàng 0: Di chuyển
-            attackAnimation = extractAnimation(spriteSheet, 2, 6, 0.15f); // Hàng 2: Tấn công
+            movingAnimation = extractAnimation(spriteSheet, 0, 8, 0.1f); // Hàng 0: Di chuyển
+            Animation<TextureRegion> attackAnimation = extractAnimation(spriteSheet, 2, 6, 0.15f); // Hàng 2: Tấn công
             hittedAnimation = extractAnimation(spriteSheet, 4, 4, 0.2f); // Hàng 4: Bị đánh
         } catch (Exception e) {
             Gdx.app.error("NormalMonster", "Error initializing animations", e);
         }
     }
-
-
 
     public void createBody(World world) {
         BodyDef bodyDef = new BodyDef();
@@ -147,7 +126,10 @@ public class NormalMonster extends Sprite {
             isHitted = true;
             state = MonsterState.HITTED;
             hittedTimer = hittedDuration;
-            knockbackVector.set(player.getBody().getLinearVelocity()).nor().scl(KNOCKBACK_FORCE);
+
+            // Tính hướng đẩy lùi (knockback)
+            Vector2 direction = body.getPosition().sub(player.getBody().getPosition()).nor();
+            knockbackVector.set(direction).scl(KNOCKBACK_FORCE);
             body.applyLinearImpulse(knockbackVector, body.getWorldCenter(), true);
         }
     }
@@ -155,35 +137,49 @@ public class NormalMonster extends Sprite {
     public void update(float delta, Player player) {
         stateTime += delta;
 
-        if (!isHitted) {
-            state = MonsterState.MOVING; // Chuyển sang trạng thái di chuyển
-            moveTowardsPlayer(delta, player);
-        }
-        // Lấy vị trí quái vật và người chơi
-        Vector2 monsterPos = body.getPosition();
-        Vector2 playerPos = new Vector2(player.getX() / PPM, player.getY() / PPM);
+        switch (state) {
+            case HITTED:
+                handleHittedState(delta);
+                break;
 
-        // Tính hướng di chuyển đến người chơi
-        Vector2 direction = playerPos.sub(monsterPos).nor();
-        body.setLinearVelocity(direction.scl(speed / PPM)); // `speed` là
+            case MOVING:
+                moveTowardsPlayer(delta, player);
+                break;
+
+            case IDLE:
+               handleIdleState(delta);
+                break;
+        }
+
+        // Đồng bộ vị trí vật lý và sprite
+        setPosition(
+            body.getPosition().x * PPM - getWidth() / 2,
+            body.getPosition().y * PPM - getHeight() / 2
+        );
     }
 
     private void handleHittedState(float delta) {
         hittedTimer -= delta;
-        if (hittedTimer <= 0) {
+        if (hittedTimer > 0) {
+            // Đẩy lùi quái vật
+            body.setLinearVelocity(knockbackVector);
+        } else {
+            // Hết thời gian bị đánh, quay lại di chuyển
             isHitted = false;
-            state = MonsterState.IDLE;
+            state = MonsterState.MOVING;
         }
     }
 
-    private void moveTowardsPlayer(float delta, Player player) {
-        if (state == MonsterState.MOVING) {
-            Vector2 playerPosition = player.getBody().getPosition();
-            Vector2 monsterPosition = body.getPosition();
+    private void handleIdleState(float delta) {
+        body.setLinearVelocity(0, 0); // Không di chuyển
+    }
 
-            Vector2 direction = playerPosition.sub(monsterPosition).nor();
-            body.setLinearVelocity(direction.scl(speed / PPM));
-        }
+    private void moveTowardsPlayer(float delta, Player player) {
+        if (isHitted) return; // Nếu đang ở trạng thái HITTED, không di chuyển
+
+        Vector2 playerPos = player.getBody().getPosition();
+        Vector2 direction = playerPos.sub(body.getPosition()).nor();
+        body.setLinearVelocity(direction.scl(speed));
     }
 
     private Animation<TextureRegion> getCurrentAnimation() {
@@ -191,37 +187,45 @@ public class NormalMonster extends Sprite {
             case HITTED:
                 return hittedAnimation;
             case MOVING:
-                return walkAnimation;
+                return movingAnimation;
             case IDLE:
             default:
-                return walkAnimation; // Quay lại hoạt ảnh di chuyển như trạng thái mặc định
+                return movingAnimation; // Quay lại hoạt ảnh di chuyển như trạng thái mặc định
         }
     }
 
     public void draw(SpriteBatch batch) {
         if (batch == null) {
-            Gdx.app.error("NormalMonster", "Cannot draw: batch is null");
+            Gdx.app.error("NormalMonster", "SpriteBatch is null in draw method");
             return;
         }
 
-        if (body == null) {
-            Gdx.app.error("NormalMonster", "Cannot draw: body is null");
-            return;
-        }
-
-        stateTime += Gdx.graphics.getDeltaTime(); // Cập nhật thời gian hoạt ảnh
+        // Lấy frame hiện tại từ hoạt ảnh
         TextureRegion currentFrame = getCurrentAnimation().getKeyFrame(stateTime, true);
 
-        // Vẽ frame hiện tại
+        // Vẽ quái vật
         batch.draw(
             currentFrame,
-            body.getPosition().x * PPM - getWidth() / 2,
-            body.getPosition().y * PPM - getHeight() / 2,
+            body.getPosition().x * GameConfig.PPM - getWidth() / 2,
+            body.getPosition().y * GameConfig.PPM - getHeight() / 2,
             getWidth(),
             getHeight()
         );
     }
 
+    @Override
+    public void takeDamage(float damage) {
+        hp -= damage;
+        if (hp <= 0) {
+            hp = 0;
+            // Chuyển trạng thái sang DEAD nếu cần
+        } else {
+            // Chuyển sang trạng thái bị đánh
+            state = MonsterState.HITTED;
+            isHitted = true;
+            hittedTimer = hittedDuration;
+        }
+    }
 
 
     public void dispose() {
@@ -244,4 +248,12 @@ public class NormalMonster extends Sprite {
         return body;
     }
 
+    public boolean isAlive(){
+        if (hp > 0) return true;
+        else return false;
+    }
+
+    public float getSpeed(){
+        return speed;
+    }
 }

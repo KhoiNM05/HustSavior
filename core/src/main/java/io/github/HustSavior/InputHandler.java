@@ -19,10 +19,18 @@ public class InputHandler extends InputAdapter {
     @Override
     public boolean keyDown(int keycode) {
         switch (keycode) {
-            case Input.Keys.A: left = true; break;
-            case Input.Keys.D: right = true; break;
-            case Input.Keys.W: up = true; break;
-            case Input.Keys.S: down = true; break;
+            case Input.Keys.A:
+                left = true;
+                break;
+            case Input.Keys.D:
+                right = true;
+                break;
+            case Input.Keys.W:
+                up = true;
+                break;
+            case Input.Keys.S:
+                down = true;
+                break;
         }
         return true;
     }
@@ -38,8 +46,12 @@ public class InputHandler extends InputAdapter {
                 right = false;
                 facingLeft = false;
                 break;
-            case Input.Keys.W: up = false; break;
-            case Input.Keys.S: down = false; break;
+            case Input.Keys.W:
+                up = false;
+                break;
+            case Input.Keys.S:
+                down = false;
+                break;
         }
         return true;
     }
@@ -53,10 +65,14 @@ public class InputHandler extends InputAdapter {
 
     private Vector2 calculateVelocity() {
         Vector2 velocity = new Vector2();
-        if (left) velocity.x = -player.getSpeed();
-        if (right) velocity.x = player.getSpeed();
-        if (up) velocity.y = player.getSpeed();
-        if (down) velocity.y = -player.getSpeed();
+        if (left)
+            velocity.x = -player.getSpeed();
+        if (right)
+            velocity.x = player.getSpeed();
+        if (up)
+            velocity.y = player.getSpeed();
+        if (down)
+            velocity.y = -player.getSpeed();
         return velocity;
     }
 
@@ -67,7 +83,7 @@ public class InputHandler extends InputAdapter {
             player.setRegion(player.walkRight.getKeyFrame(stateTime, true));
         } else if (velocity.y != 0) {
             player.setRegion((facingLeft ? player.walkLeft : player.walkRight)
-                .getKeyFrame(stateTime, true));
+                    .getKeyFrame(stateTime, true));
         }
     }
 }
