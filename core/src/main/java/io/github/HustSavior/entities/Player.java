@@ -1,18 +1,22 @@
 package io.github.HustSavior.entities;
 
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.*;
-import io.github.HustSavior.utils.GameConfig;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.Application;
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.physics.box2d.World;
+
+import io.github.HustSavior.utils.GameConfig;
 
 public class Player extends Sprite {
     private static final float PPM = GameConfig.PPM;
@@ -204,13 +208,6 @@ public class Player extends Sprite {
         }
     }
 
-    public void resetMovement() {
-        // Reset any movement restrictions
-        // This method is called when the dialog closes
-        Gdx.app.log("Player", "Movement reset"); // Debug log
-        // The player will now be able to move again because the InputHandler
-        // will process new movement inputs
-    }
 
     public void acquireEffect(int id){
         switch(id){
@@ -226,5 +223,14 @@ public class Player extends Sprite {
 
     public void heal(float amount) {
         this.health = Math.min(this.health + amount, this.maxHealth);
+    }
+
+    public void stopMovement() {
+        getBody().setLinearVelocity(0, 0);
+    }
+
+    public void resetMovement() {
+        // Reset any movement-related states if needed
+        getBody().setLinearVelocity(0, 0);
     }
 }

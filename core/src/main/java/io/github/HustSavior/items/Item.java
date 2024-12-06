@@ -2,18 +2,29 @@ package io.github.HustSavior.items;
 
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.physics.box2d.*;
+import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.physics.box2d.World;
 
-public class Item {
+public abstract class Item {
     Body body;
     Sprite sprite;
     private boolean collected = false;
+    protected String imagePath;
+    protected String dialogMessage;
+    private boolean visible = true;
+    private float PPM;
 
     public Item(Sprite sprite, int x, int y, float PPM, World world){
         this.sprite = sprite;
+        this.imagePath = "";
         sprite.setPosition(x, y);
         sprite.setSize(sprite.getRegionWidth() * 0.1f, sprite.getRegionHeight() * 0.1f);
         body = createStaticBody(x, y, PPM, world);
+        this.dialogMessage = "You got an item!";  // Default message
+        this.PPM = PPM;
     }
 
     public Body createStaticBody(int x, int y, float PPM, World world){
@@ -40,7 +51,7 @@ public class Item {
     }
 
     public void draw(SpriteBatch batch){
-        if (!collected) {
+        if (visible && !collected) {
             sprite.draw(batch);
         }
     }
@@ -51,5 +62,33 @@ public class Item {
 
     public boolean isCollected() {
         return collected;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public String getDialogMessage() {
+        return dialogMessage;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public Object getPosition() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public float getX() {
+        return body.getPosition().x * PPM;
+    }
+
+    public float getY() {
+        return body.getPosition().y * PPM;
     }
 }

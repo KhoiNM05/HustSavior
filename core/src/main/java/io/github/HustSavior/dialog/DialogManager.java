@@ -1,59 +1,43 @@
 package io.github.HustSavior.dialog;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Timer;
+
+import io.github.HustSavior.input.InputHandler;
 
 public class DialogManager {
     private Stage stage;
     private Skin skin;
-    private Dialog currentDialog;
-    private boolean isDialogActive;
-    private static final float AUTO_CLOSE_DELAY = 1f; // 1 second
-
-    public DialogManager(Stage stage, Skin skin) {
+    private InputHandler inputHandler;
+    private WarningDialog warningDialog;
+    private ItemPickupDialog itemPickupDialog;
+    
+    public DialogManager(Stage stage, Skin skin, InputHandler inputHandler) {
         this.stage = stage;
-        this.skin = skin;
-        this.isDialogActive = false;
+        this.skin = new Skin(Gdx.files.internal("UI/dialogue/dialog.json"));
+        this.inputHandler = inputHandler;
+        
+        this.warningDialog = new WarningDialog(stage, this.skin, inputHandler);
+        this.itemPickupDialog = new ItemPickupDialog(stage, this.skin, inputHandler);
     }
 
     public void showWarningDialog(String message, Runnable onClose) {
-        if (!isDialogActive) {
-            isDialogActive = true;
-            currentDialog = new Dialog("Warning", skin) {
-                @Override
-                protected void result(Object obj) {
-                    isDialogActive = false;
-                    if (onClose != null) onClose.run();
-                    hide();
-                }
-            };
-            
-            currentDialog.text(message);
-            currentDialog.show(stage);
-            centerDialog();
-
-            // Auto-close after delay
-            Timer.schedule(new Timer.Task() {
-                @Override
-                public void run() {
-                    isDialogActive = false;
-                    if (onClose != null) onClose.run();
-                    currentDialog.hide();
-                }
-            }, AUTO_CLOSE_DELAY);
-        }
+        warningDialog.createDialog(message, onClose);
     }
 
-    private void centerDialog() {
-        currentDialog.setPosition(
-            (stage.getWidth() - currentDialog.getWidth()) / 2,
-            (stage.getHeight() - currentDialog.getHeight()) / 2
-        );
+    public void showItemPickupDialog(String itemName, String imagePath, Runnable onClose) {
+        itemPickupDialog.show(itemName, imagePath, onClose);
     }
 
     public boolean update(float delta) {
-        return isDialogActive;
+        return warningDialog.update(delta) || itemPickupDialog.update(delta);
     }
 } 

@@ -6,21 +6,21 @@ filter: Linear, Linear
 repeat: none
 dialogue
   rotate: false
-  xy: 1, 599
-  size: 1000, 400
-  orig: 1000, 400
+  xy: 1, 384
+  size: 642, 257
+  orig: 642, 257
   offset: 0, 0
   index: -1
 at01
   rotate: false
-  xy: 1, 567
+  xy: 1, 352
   size: 506, 30
   orig: 506, 30
   offset: 0, 0
   index: -1
 at01(1)
   rotate: false
-  xy: 1, 535
+  xy: 1, 320
   size: 506, 30
   orig: 506, 30
   offset: 0, 0

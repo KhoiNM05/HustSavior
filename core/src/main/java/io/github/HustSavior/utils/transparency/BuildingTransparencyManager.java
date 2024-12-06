@@ -5,6 +5,7 @@ import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Rectangle;  
+
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.GameConfig;
 

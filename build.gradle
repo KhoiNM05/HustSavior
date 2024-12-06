@@ -54,6 +54,10 @@ configure(subprojects) {
   compileJava {
     options.incremental = true
   }
+
+  tasks.withType(ProcessResources) {
+    doNotTrackState("Resource processing is not tracking state")
+  }
 }
 
 subprojects {

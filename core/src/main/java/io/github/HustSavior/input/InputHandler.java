@@ -1,4 +1,4 @@
-package io.github.HustSavior;
+package io.github.HustSavior.input;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -11,9 +11,20 @@ public class InputHandler extends InputAdapter {
     private boolean left, right, up, down;
     private boolean facingLeft;
     private float stateTime;
+    private boolean dialogActive = false;
 
     public InputHandler(Player player) {
         this.player = player;
+    }
+
+    public void setDialogActive(boolean active) {
+        this.dialogActive = active;
+        if (active) {
+            left = false;
+            right = false;
+            up = false;
+            down = false;
+        }
     }
 
     @Override
@@ -57,6 +68,11 @@ public class InputHandler extends InputAdapter {
     }
 
     public void update(float delta) {
+        if (dialogActive) {
+            player.getBody().setLinearVelocity(0, 0);
+            return;
+        }
+
         stateTime += Gdx.graphics.getDeltaTime();
         Vector2 velocity = calculateVelocity();
         updatePlayerAnimation(velocity);
@@ -83,7 +99,7 @@ public class InputHandler extends InputAdapter {
             player.setRegion(player.walkRight.getKeyFrame(stateTime, true));
         } else if (velocity.y != 0) {
             player.setRegion((facingLeft ? player.walkLeft : player.walkRight)
-                    .getKeyFrame(stateTime, true));
+                .getKeyFrame(stateTime, true));
         }
     }
 }

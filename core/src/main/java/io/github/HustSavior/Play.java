@@ -34,12 +34,17 @@ import io.github.HustSavior.collision.CollisionBodyFactory;
 import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.dialog.DialogManager;
 import io.github.HustSavior.entities.Player;
-import io.github.HustSavior.items.Item;
-import io.github.HustSavior.items.HPPotion;
+import io.github.HustSavior.input.InputHandler;
+import io.github.HustSavior.items.AlgebraBook;
 import io.github.HustSavior.items.AssetSetter;
+import io.github.HustSavior.items.CalcBook;
+import io.github.HustSavior.items.HPPotion;
+import io.github.HustSavior.items.Item;
+import io.github.HustSavior.items.PhysicBook;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.skills.SkillManager;
+import io.github.HustSavior.spawn.SpawnManager;
 import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
@@ -76,6 +81,7 @@ public class Play implements Screen {
     private Stage stage;
     private float warningCooldown = 0;
     private DialogManager dialogManager;
+    private SpawnManager spawnManager;
 
     public Play(Game game) {
         // Set logging level to show debug messages
@@ -90,21 +96,22 @@ public class Play implements Screen {
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
         gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
 
-        // Add debug logging before creating HighgroundManager
-        Gdx.app.log("Play", "=== Map Layers Debug ===");
-        if (gameMap.getTiledMap() == null) {
-            Gdx.app.error("Play", "TiledMap is null!");
-        } else {
-            for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
-                Gdx.app.log("Play", "Found layer: " + layer.getName());
-            }
-        }
+        // Initialize SpawnManager before loading items
+        spawnManager = new SpawnManager(gameMap.getTiledMap());
 
+        // Initialize highground manager
         highgroundManager = new HighgroundManager(gameMap.getTiledMap());
-        // Add debug call after initialization
-        highgroundManager.debugPrintAreas();
 
-        createCollisionBodies();
+        // Initialize transparency manager
+        transparencyManager = new BuildingTransparencyManager(
+            gameMap.getTiledMap(),
+            gameMap.getLayer("D3"),
+            gameMap.getLayer("D5"),
+            gameMap.getLayer("D35"),
+            gameMap.getLayer("Library"),
+            gameMap.getLayer("Roof"),
+            gameMap.getLayer("Parking")
+        );
 
         player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
                 500, 500, world);
@@ -113,6 +120,8 @@ public class Play implements Screen {
         assetSetter = new AssetSetter();
         skillManager = new SkillManager(player, world);
         skillManager.activateSkills(1);
+
+        // Load items after SpawnManager is initialized
         loadItems();
 
         // Add UI stage and pause button
@@ -121,7 +130,7 @@ public class Play implements Screen {
         uiStage.addActor(pauseButton);
 
         // Initialize DialogManager before the input multiplexer setup
-        dialogManager = new DialogManager(uiStage, new Skin(Gdx.files.internal("UI/dialogue/dialog.json")));
+        dialogManager = new DialogManager(uiStage, new Skin(Gdx.files.internal("UI/dialogue/dialog.json")), inputHandler);
 
         // Initialize stage with proper viewport
         stage = new Stage(new ScreenViewport());
@@ -140,14 +149,6 @@ public class Play implements Screen {
             (int)stage.getViewport().getWorldHeight()));
 
         // Initialize transparency manager with map layers
-        transparencyManager = new BuildingTransparencyManager(
-                gameMap.getTiledMap(),
-                gameMap.getLayer("D3"),
-                gameMap.getLayer("D5"),
-                gameMap.getLayer("D35"),
-                gameMap.getLayer("Library"),
-                gameMap.getLayer("Roof"),
-                gameMap.getLayer("Parking"));
         shapeRenderer = new ShapeRenderer();
         skin = new Skin(Gdx.files.internal("uiskin.json"));
     }
@@ -161,16 +162,7 @@ public class Play implements Screen {
 
     private World setupWorld() {
         World world = new World(new Vector2(0, 0), true);
-        world.setContactListener(new CollisionListener() {
-            @Override
-            public void beginContact(Contact contact) {
-                super.beginContact(contact);
-                // Manage collision for bullet
-                handleBulletCollision(contact);
-                // Manage collision for item
-                itemCollection(contact);
-            }
-        });
+        world.setContactListener(new CollisionListener(this));
         return world;
     }
 
@@ -229,18 +221,22 @@ public class Play implements Screen {
     }
 
     private void createCollisionBodies() {
-        if (gameMap.getTiledMap().getLayers().get("collisions") == null) {
-            Gdx.app.error("Play", "Collisions layer not found in map!");
-            return;
+        // Only create collision bodies for the general collisions layer
+        MapLayer collisionsLayer = gameMap.getTiledMap().getLayers().get("collisions");
+        if (collisionsLayer != null) {
+            createCollisionBodiesForLayer(collisionsLayer);
         }
+    }
 
-        for (MapObject object : gameMap.getTiledMap().getLayers().get("collisions").getObjects()) {
+    private void createCollisionBodiesForLayer(MapLayer layer) {
+        if (layer == null) return;
+
+        for (MapObject object : layer.getObjects()) {
             if (object instanceof RectangleMapObject) {
                 collisionBodyFactory.createStaticBody((RectangleMapObject) object);
             } else if (object instanceof PolygonMapObject) {
                 collisionBodyFactory.createStaticBody((PolygonMapObject) object);
             }
-
         }
     }
 
@@ -249,6 +245,11 @@ public class Play implements Screen {
         assetSetter.createObject(400, 400, 2, PPM, world);
         assetSetter.createObject(300, 300, 3, PPM, world);
         assetSetter.createObject(250, 250, 4, PPM, world);
+
+        // Register all items with the SpawnManager
+        for (Item item : assetSetter.objectList) {
+            spawnManager.registerItem(item);
+        }
     }
 
     @Override
@@ -260,10 +261,13 @@ public class Play implements Screen {
     public void render(float delta) {
         clearScreen();
 
-        // Only update game if dialog is not active
+        // Only update game and allow movement if dialog is not active
         if (!isPaused && !dialogManager.update(delta)) {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
+        } else {
+            // Stop player movement while dialog is active
+            player.stopMovement();
         }
 
         drawGame();
@@ -280,6 +284,17 @@ public class Play implements Screen {
         stage.getViewport().update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
         stage.act(delta);
         stage.draw();
+
+        dialogManager.update(delta);
+        stage.act(delta);
+        stage.draw();
+
+        // Update item visibilities based on player position
+        Vector2 playerPos = new Vector2(
+            player.getBody().getPosition().x * PPM,
+            player.getBody().getPosition().y * PPM
+        );
+        spawnManager.updateItemVisibilities(playerPos);
     }
 
     private void clearScreen() {
@@ -301,6 +316,9 @@ public class Play implements Screen {
         Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
         // Convert back to Box2D coordinates (divide by PPM) and set the body position
         player.getBody().setTransform(adjustedPos.x / PPM, adjustedPos.y / PPM, player.getBody().getAngle());
+
+        // Update item visibility based on player position
+        spawnManager.updateItemVisibilities(new Vector2(player.getX(), player.getY()));
     }
 
     private void updateCamera() {
@@ -409,13 +427,63 @@ public class Play implements Screen {
 
                 if (playerRect.overlaps(rect)) {
                     Gdx.app.log("Play", "Collision detected with warning area");
+                    // Stop player movement when showing dialog
+                    player.stopMovement();
                     dialogManager.showWarningDialog("Anh hen em pickleball", () -> {
                         Gdx.app.log("Play", "Dialog closed callback");
+                        // Reset player movement when dialog closes
+                        player.resetMovement();
                     });
-                    warningCooldown = WARNING_COOLDOWN_TIME; // Set cooldown
+                    warningCooldown = WARNING_COOLDOWN_TIME;
                     break;
                 }
             }
         }
     }
+
+    public void handleItemCollision(Contact contact) {
+        Object userDataA = contact.getFixtureA().getBody().getUserData();
+        Object userDataB = contact.getFixtureB().getBody().getUserData();
+
+        if (userDataA instanceof Player && userDataB instanceof Item) {
+            handleItemCollision((Item) userDataB);
+        } else if (userDataB instanceof Player && userDataA instanceof Item) {
+            handleItemCollision((Item) userDataA);
+        }
+    }
+
+    private void handleItemCollision(Item item) {
+        if (!item.isCollected()) {
+            inputHandler.setDialogActive(true);
+            dialogManager.showItemPickupDialog(item.getDialogMessage(), item.getImagePath(), () -> {
+                item.setCollected(true);
+                assetSetter.objectAcquired(item);
+                inputHandler.setDialogActive(false);
+            });
+        }
+    }
+
+    private String getItemName(Item item) {
+        if (item instanceof CalcBook) return "Calculus Book";
+        if (item instanceof AlgebraBook) return "Algebra Book";
+        if (item instanceof PhysicBook) return "Physics Book";
+        if (item instanceof HPPotion) return "Health Potion";
+        return "Unknown Item";
+    }
+
+    // Update your collision listener to use this method
+    private void beginContact(Contact contact) {
+        Object userDataA = contact.getFixtureA().getBody().getUserData();
+        Object userDataB = contact.getFixtureB().getBody().getUserData();
+
+        if (userDataA instanceof Player && userDataB instanceof Item) {
+            handleItemCollision((Item) userDataB);
+        } else if (userDataB instanceof Player && userDataA instanceof Item) {
+            handleItemCollision((Item) userDataA);
+        }
+    }
 }
+
+
+
+
