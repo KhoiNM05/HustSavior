@@ -34,6 +34,8 @@ public class Player extends Sprite {
     public final Animation<TextureRegion> walkRight;
     private final Body body;
 
+    private static boolean facingLeft;
+
     // HP and XP
     private Texture healthBarTexture;
     private static final float HEALTH_BAR_WIDTH = 30f;
@@ -208,5 +210,21 @@ public class Player extends Sprite {
         Gdx.app.log("Player", "Movement reset"); // Debug log
         // The player will now be able to move again because the InputHandler
         // will process new movement inputs
+    }
+
+    public void acquireEffect(int id){
+        switch(id){
+            case 1: break;
+            default: ;
+        }
+
+    }
+
+    public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}
+    public boolean isFacingLeft(){return facingLeft;}
+    public float getPPM(){return PPM;}
+
+    public void heal(float amount) {
+        this.health = Math.min(this.health + amount, this.maxHealth);
     }
 }
