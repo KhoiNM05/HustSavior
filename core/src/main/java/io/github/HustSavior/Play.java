@@ -260,9 +260,8 @@ public class Play implements Screen {
     @Override
     public void render(float delta) {
         clearScreen();
-
         // Only update game and allow movement if dialog is not active
-        if (!isPaused && !dialogManager.update(delta)) {
+        if (!isPaused && !dialogManager.isDialogActive()) {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
         } else {
@@ -408,33 +407,32 @@ public class Play implements Screen {
             return;
         }
 
-        // Update cooldown
         if (warningCooldown > 0) {
             warningCooldown -= Gdx.graphics.getDeltaTime();
             return;
         }
 
+        Vector2 playerPos = player.getBody().getPosition();
+        com.badlogic.gdx.math.Rectangle playerRect = new com.badlogic.gdx.math.Rectangle(
+            playerPos.x * PPM,  // Convert Box2D coordinates to pixels
+            playerPos.y * PPM,
+            player.getBody().getFixtureList().get(0).getShape().getRadius() * 2 * PPM,  // Use body size
+            player.getBody().getFixtureList().get(0).getShape().getRadius() * 2 * PPM
+        );
+
         for (MapObject object : gameMap.getTiledMap().getLayers().get("warnings").getObjects()) {
             if (object instanceof RectangleMapObject) {
                 RectangleMapObject rectObject = (RectangleMapObject) object;
                 com.badlogic.gdx.math.Rectangle rect = rectObject.getRectangle();
-                com.badlogic.gdx.math.Rectangle playerRect = new com.badlogic.gdx.math.Rectangle(
-                    player.getX(),
-                    player.getY(),
-                    player.getWidth(),
-                    player.getHeight()
-                );
 
                 if (playerRect.overlaps(rect)) {
                     Gdx.app.log("Play", "Collision detected with warning area");
-                    // Stop player movement when showing dialog
                     player.stopMovement();
                     dialogManager.showWarningDialog("Anh hen em pickleball", () -> {
                         Gdx.app.log("Play", "Dialog closed callback");
-                        // Reset player movement when dialog closes
                         player.resetMovement();
+                        warningCooldown = WARNING_COOLDOWN_TIME;
                     });
-                    warningCooldown = WARNING_COOLDOWN_TIME;
                     break;
                 }
             }

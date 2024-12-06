@@ -136,27 +136,27 @@ public class SpawnManager {
     }
 
     private void updateItemVisibility(Item item, Vector2 playerPosition) {
-        boolean shouldBeVisible = false;
+        boolean shouldBeVisible = true;
         Vector2 itemPosition = new Vector2(item.getX(), item.getY());
-        boolean itemInAnyBounds = false;
+        boolean itemInBounds = false;
 
         for (BoundedSpawnArea area : boundedSpawnAreas) {
             if (area.contains(itemPosition)) {
-                itemInAnyBounds = true;
-                // Item is in a bounded area, only show if player is also in the area
-                if (area.contains(playerPosition)) {
-                    shouldBeVisible = true;
+                itemInBounds = true;
+                // If item is in a bounded area, it should only be visible when player is in the same area
+                if (!area.contains(playerPosition)) {
+                    shouldBeVisible = false;
                     break;
                 }
             }
         }
 
         // If item is not in any bounds, it should always be visible
-        if (!itemInAnyBounds) {
+        if (!itemInBounds) {
             shouldBeVisible = true;
         }
 
-        item.setVisible(shouldBeVisible);
+        item.setVisible(shouldBeVisible && !item.isCollected());
     }
 
     private static class BoundedSpawnArea {

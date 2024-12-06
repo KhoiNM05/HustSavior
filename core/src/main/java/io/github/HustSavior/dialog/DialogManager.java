@@ -19,6 +19,7 @@ public class DialogManager {
     private InputHandler inputHandler;
     private WarningDialog warningDialog;
     private ItemPickupDialog itemPickupDialog;
+    private boolean dialogActive = false;
     
     public DialogManager(Stage stage, Skin skin, InputHandler inputHandler) {
         this.stage = stage;
@@ -36,8 +37,12 @@ public class DialogManager {
     public void showItemPickupDialog(String itemName, String imagePath, Runnable onClose) {
         itemPickupDialog.show(itemName, imagePath, onClose);
     }
+    public void update(float delta) {
+        warningDialog.update(delta);
+        itemPickupDialog.update(delta);
+    }
 
-    public boolean update(float delta) {
-        return warningDialog.update(delta) || itemPickupDialog.update(delta);
+    public boolean isDialogActive() {
+        return dialogActive;
     }
 } 
