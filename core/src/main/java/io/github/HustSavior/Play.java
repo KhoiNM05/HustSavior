@@ -49,10 +49,10 @@ public class Play implements Screen {
 
     private final OrthographicCamera camera;
     private final Viewport viewport;
-    private final GameMap gameMap;
-    private final Player player;
+    private final GameMap gameMap = null;
+    private final Player player = null;
     private BulletManager bulletManager;
-    private final InputHandler inputHandler;
+    private final InputHandler inputHandler = null;
     private final World world;
 
     private Stage uiStage;
@@ -63,7 +63,7 @@ public class Play implements Screen {
     private CollisionBodyFactory collisionBodyFactory;
     private HighgroundManager highgroundManager;
 
-    private final NormalMonster normalMonster;
+    private final NormalMonster normalMonster = null;
     private final Array<MonsterBehavior> monsters = new Array<>();
 
     private SpriteBatch batch;
@@ -72,6 +72,7 @@ public class Play implements Screen {
     public Play(Game game) {
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
+
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
         viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
@@ -80,26 +81,43 @@ public class Play implements Screen {
 
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
-        gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
+        GameMap tempMap = null;
+        Player tempPlayer = null; // Biến tạm thời cho player
+        InputHandler tempInputHandler = null; // Biến tạm thời cho inputHandler
+        NormalMonster tempNormalMonster = null; // Biến tạm thời cho normalMonster
+        try {
+            gameMap = new GameMap("map/map.tmx", collisionBodyFactory); // Khởi tạo trực tiếp gameMap
+            Gdx.app.log("GameMap", "Bản đồ được tải thành công.");
+            tempPlayer = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500, 500, world);
+            tempInputHandler = new InputHandler(tempPlayer); // Khởi tạo inputHandler sau khi có player
+            bulletManager = new BulletManager(world, tempPlayer);
+            tempNormalMonster = new NormalMonster("sprites/blueMonster.png", 300, 300, world);
+            tempNormalMonster.createBody(world);
 
-        // Add debug logging before creating HighgroundManager
+        } catch (Exception e) {
+            Gdx.app.error("GameMap", "Không thể tải bản đồ.", e);
+            e.printStackTrace();
+            // Xử lý lỗi tải map, ví dụ:
+            Gdx.app.exit(); // Thoát game
+            return; // Thoát khỏi constructor
+        }
+        gameMap = tempMap;
+        player = tempPlayer;
+        inputHandler = tempInputHandler;
+        normalMonster = tempNormalMonster;
+
+        // Add debug logging for map layers
         Gdx.app.log("Play", "=== Map Layers Debug ===");
-        if (gameMap.getTiledMap() == null) {
-            Gdx.app.error("Play", "TiledMap is null!");
-        } else {
-            for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
-                Gdx.app.log("Play", "Found layer: " + layer.getName());
-            }
+        for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
+            Gdx.app.log("Play", "Found layer: " + layer.getName());
         }
 
         highgroundManager = new HighgroundManager(gameMap.getTiledMap());
-        // Add debug call after initialization
         highgroundManager.debugPrintAreas();
 
         createCollisionBodies();
 
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
-                500, 500, world);
+        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500, 500, world);
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
 
@@ -116,18 +134,17 @@ public class Play implements Screen {
 
         // Initialize transparency manager with map layers
         transparencyManager = new BuildingTransparencyManager(
-                gameMap.getTiledMap(),
-                gameMap.getLayer("D3"),
-                gameMap.getLayer("D5"),
-                gameMap.getLayer("D35"),
-                gameMap.getLayer("Library"),
-                gameMap.getLayer("Roof"),
-                gameMap.getLayer("Parking"));
+            gameMap.getTiledMap(),
+            gameMap.getLayer("D3"),
+            gameMap.getLayer("D5"),
+            gameMap.getLayer("D35"),
+            gameMap.getLayer("Library"),
+            gameMap.getLayer("Roof"),
+            gameMap.getLayer("Parking"));
         shapeRenderer = new ShapeRenderer();
 
-        normalMonster = new NormalMonster("sprites/blueMonster.png", 300, 300, world);
-        normalMonster.createBody(world);
-        spawnMonsters(5,99);
+        // Spawn initial monsters
+        spawnMonsters(5, 100);
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -222,10 +239,13 @@ public class Play implements Screen {
     private void handleBulletCollision(Contact contact) {
         Fixture fixtureA = contact.getFixtureA();
         Fixture fixtureB = contact.getFixtureB();
-        if (fixtureA.getBody().getUserData() instanceof Bullet) {
-            ((Bullet) fixtureA.getBody().getUserData()).incrementCollisionCount();
-        } else if (fixtureB.getBody().getUserData() instanceof Bullet) {
-            ((Bullet) fixtureB.getBody().getUserData()).incrementCollisionCount();
+        Object userDataA = fixtureA.getBody().getUserData();
+        Object userDataB = fixtureB.getBody().getUserData();
+
+        if (userDataA instanceof Bullet) {
+            ((Bullet) userDataA).incrementCollisionCount();
+        } else if (userDataB instanceof Bullet) {
+            ((Bullet) userDataB).incrementCollisionCount();
         }
     }
 
@@ -262,7 +282,7 @@ public class Play implements Screen {
 
         batch.setProjectionMatrix(camera.combined); // Đồng bộ hóa camera với batch
         drawMonster(); // Vẽ quái vật
-
+        drawGame();
         uiStage.act(delta);
         uiStage.draw();
     }
@@ -293,8 +313,10 @@ public class Play implements Screen {
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
         Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
-        // Convert back to Box2D coordinates (divide by PPM) and set the body position
         player.getBody().setTransform(adjustedPos.x / PPM, adjustedPos.y / PPM, player.getBody().getAngle());
+
+        // Cập nhật độ trong suốt của building
+        transparencyManager.update(player);
     }
 
     private void updateCamera() {
