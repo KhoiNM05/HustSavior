@@ -11,6 +11,8 @@ import io.github.HustSavior.utils.GameConfig;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.Application;
+import com.badlogic.gdx.Gdx;
 
 public class Player extends Sprite {
     private static final float PPM = GameConfig.PPM;
@@ -191,5 +193,20 @@ public class Player extends Sprite {
         setPosition(
                 body.getPosition().x * GameConfig.PPM - getWidth() / 2,
                 body.getPosition().y * GameConfig.PPM - getHeight() / 2);
+    }
+
+    public void stop() {
+        // Stop the player's movement
+        if (body != null) {
+            body.setLinearVelocity(0, 0);
+        }
+    }
+
+    public void resetMovement() {
+        // Reset any movement restrictions
+        // This method is called when the dialog closes
+        Gdx.app.log("Player", "Movement reset"); // Debug log
+        // The player will now be able to move again because the InputHandler
+        // will process new movement inputs
     }
 }
