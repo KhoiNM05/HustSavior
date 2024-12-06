@@ -22,6 +22,7 @@ import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -33,8 +34,12 @@ import io.github.HustSavior.collision.CollisionBodyFactory;
 import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.dialog.DialogManager;
 import io.github.HustSavior.entities.Player;
+import io.github.HustSavior.items.Item;
+import io.github.HustSavior.items.HPPotion;
+import io.github.HustSavior.items.AssetSetter;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
+import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
@@ -53,6 +58,9 @@ public class Play implements Screen {
     private final GameMap gameMap;
     private final Player player;
     private BulletManager bulletManager;
+    // Skill
+    private final AssetSetter assetSetter;
+    private final SkillManager skillManager;
     private final InputHandler inputHandler;
     private final World world;
 
@@ -63,6 +71,7 @@ public class Play implements Screen {
     private ShapeRenderer shapeRenderer;
     private CollisionBodyFactory collisionBodyFactory;
     private HighgroundManager highgroundManager;
+    private Skin skin;
 
     private Stage stage;
     private float warningCooldown = 0;
@@ -101,6 +110,10 @@ public class Play implements Screen {
                 500, 500, world);
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
+        assetSetter = new AssetSetter();
+        skillManager = new SkillManager(player, world);
+        skillManager.activateSkills(1);
+        loadItems();
 
         // Add UI stage and pause button
         uiStage = new Stage(new ScreenViewport());
@@ -109,11 +122,11 @@ public class Play implements Screen {
 
         // Initialize DialogManager before the input multiplexer setup
         dialogManager = new DialogManager(uiStage, new Skin(Gdx.files.internal("UI/dialogue/dialog.json")));
-        
+
         // Initialize stage with proper viewport
         stage = new Stage(new ScreenViewport());
         stage.getViewport().update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
-        
+
 
         // Make sure input processor is set up correctly
         InputMultiplexer multiplexer = new InputMultiplexer();
@@ -122,8 +135,8 @@ public class Play implements Screen {
         multiplexer.addProcessor(inputHandler);
         Gdx.input.setInputProcessor(multiplexer);
 
-        Gdx.app.log("Play", String.format("Initial stage viewport: %dx%d", 
-            (int)stage.getViewport().getWorldWidth(), 
+        Gdx.app.log("Play", String.format("Initial stage viewport: %dx%d",
+            (int)stage.getViewport().getWorldWidth(),
             (int)stage.getViewport().getWorldHeight()));
 
         // Initialize transparency manager with map layers
@@ -136,6 +149,7 @@ public class Play implements Screen {
                 gameMap.getLayer("Roof"),
                 gameMap.getLayer("Parking"));
         shapeRenderer = new ShapeRenderer();
+        skin = new Skin(Gdx.files.internal("uiskin.json"));
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -153,6 +167,8 @@ public class Play implements Screen {
                 super.beginContact(contact);
                 // Manage collision for bullet
                 handleBulletCollision(contact);
+                // Manage collision for item
+                itemCollection(contact);
             }
         });
         return world;
@@ -166,6 +182,50 @@ public class Play implements Screen {
         } else if (fixtureB.getBody().getUserData() instanceof Bullet) {
             ((Bullet) fixtureB.getBody().getUserData()).incrementCollisionCount();
         }
+    }
+
+    private void itemCollection(Contact contact) {
+        Fixture fixtureA = contact.getFixtureA();
+        Fixture fixtureB = contact.getFixtureB();
+
+        Object userDataA = fixtureA.getBody().getUserData();
+        Object userDataB = fixtureB.getBody().getUserData();
+
+        if (userDataA instanceof Item && userDataB instanceof Player) {
+            Item item = (Item) userDataA;
+            if (!item.isCollected()) {
+                item.setCollected(true);
+                fixtureA.setSensor(true); // Convert to sensor instead of destroying
+                if (item instanceof HPPotion) {
+                    player.heal(50);
+                }
+                assetSetter.objectAcquired(item);
+                showItemCollectedDialog();
+            }
+        } else if (userDataA instanceof Player && userDataB instanceof Item) {
+            Item item = (Item) userDataB;
+            if (!item.isCollected()) {
+                item.setCollected(true);
+                fixtureB.setSensor(true); // Convert to sensor instead of destroying
+                if (item instanceof HPPotion) {
+                    player.heal(50);
+                }
+                assetSetter.objectAcquired(item);
+                showItemCollectedDialog();
+            }
+        }
+    }
+
+    private void showItemCollectedDialog() {
+        Dialog dialog = new Dialog("Item Collected", skin) {
+            @Override
+            protected void result(Object object) {
+                this.hide();
+            }
+        };
+        dialog.text("You have collected a new item!");
+        dialog.button("OK", true);
+        dialog.show(uiStage);
     }
 
     private void createCollisionBodies() {
@@ -184,6 +244,13 @@ public class Play implements Screen {
         }
     }
 
+    private void loadItems() {
+        assetSetter.createObject(500, 500, 1, PPM, world);
+        assetSetter.createObject(400, 400, 2, PPM, world);
+        assetSetter.createObject(300, 300, 3, PPM, world);
+        assetSetter.createObject(250, 250, 4, PPM, world);
+    }
+
     @Override
     public void show() {
         // Gdx.input.setInputProcessor(inputHandler);
@@ -192,13 +259,13 @@ public class Play implements Screen {
     @Override
     public void render(float delta) {
         clearScreen();
-        
+
         // Only update game if dialog is not active
         if (!isPaused && !dialogManager.update(delta)) {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
         }
-        
+
         drawGame();
 
         // Draw UI elements
@@ -208,7 +275,7 @@ public class Play implements Screen {
         transparencyManager.update(player);
 
         checkCollisions();
-        
+
         // Update stage viewport to match screen size
         stage.getViewport().update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
         stage.act(delta);
@@ -227,6 +294,7 @@ public class Play implements Screen {
         }
         updateCamera();
         bulletManager.update(delta);
+        skillManager.update(delta);
 
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
@@ -249,6 +317,8 @@ public class Play implements Screen {
         renderer.setView(camera);
         renderer.render();
         renderer.getBatch().begin();
+        skillManager.drawSkills((SpriteBatch) renderer.getBatch());
+        assetSetter.drawObject((SpriteBatch) renderer.getBatch());
         player.draw((SpriteBatch) renderer.getBatch(), camera);
         bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
         renderer.getBatch().end();
@@ -283,17 +353,17 @@ public class Play implements Screen {
         viewport.update(width, height, true);
         camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
         camera.update();
-        
+
         // Update both UI stages
         uiStage.getViewport().update(width, height, true);
         stage.getViewport().update(width, height, true);
-        
+
         pauseButton.updatePosition();
-        
+
         // Log viewport sizes
-        Gdx.app.log("Play", String.format("Resize - Window: %dx%d, Stage viewport: %dx%d", 
-            width, height, 
-            (int)stage.getViewport().getWorldWidth(), 
+        Gdx.app.log("Play", String.format("Resize - Window: %dx%d, Stage viewport: %dx%d",
+            width, height,
+            (int)stage.getViewport().getWorldWidth(),
             (int)stage.getViewport().getWorldHeight()));
     }
 
@@ -336,7 +406,7 @@ public class Play implements Screen {
                     player.getWidth(),
                     player.getHeight()
                 );
-                
+
                 if (playerRect.overlaps(rect)) {
                     Gdx.app.log("Play", "Collision detected with warning area");
                     dialogManager.showWarningDialog("Anh hen em pickleball", () -> {
