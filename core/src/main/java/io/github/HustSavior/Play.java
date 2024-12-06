@@ -1,7 +1,10 @@
 package io.github.HustSavior;
 
+import com.badlogic.gdx.Application;
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -9,35 +12,34 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.physics.box2d.Contact;
+import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.badlogic.gdx.maps.MapLayer;
-import com.badlogic.gdx.Application;
 
+import io.github.HustSavior.bullet.Bullet;
+import io.github.HustSavior.bullet.BulletManager;
+import io.github.HustSavior.collision.CollisionBodyFactory;
+import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.entities.MonsterBehavior;
 import io.github.HustSavior.entities.NormalMonster;
 import io.github.HustSavior.entities.Player;
-import io.github.HustSavior.bullet.Bullet;
+import io.github.HustSavior.map.GameMap;
+import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
-import io.github.HustSavior.collision.CollisionBodyFactory;
-import io.github.HustSavior.collision.CollisionListener;
-import io.github.HustSavior.map.GameMap;
-import io.github.HustSavior.map.HighgroundManager;
-import io.github.HustSavior.bullet.BulletManager;
 
 public class Play implements Screen {
     private final float PPM = GameConfig.PPM;
@@ -49,10 +51,10 @@ public class Play implements Screen {
 
     private final OrthographicCamera camera;
     private final Viewport viewport;
-    private final GameMap gameMap = null;
-    private final Player player = null;
+    private final GameMap gameMap;
+    private final Player player;
     private BulletManager bulletManager;
-    private final InputHandler inputHandler = null;
+    private final InputHandler inputHandler;
     private final World world;
 
     private Stage uiStage;
@@ -63,9 +65,8 @@ public class Play implements Screen {
     private CollisionBodyFactory collisionBodyFactory;
     private HighgroundManager highgroundManager;
 
-    private final NormalMonster normalMonster = null;
-    private final Array<MonsterBehavior> monsters = new Array<>();
-
+    private Array<MonsterBehavior> monsters = new Array<>();
+    private NormalMonster normalMonster = null;
     private SpriteBatch batch;
 
 
@@ -81,30 +82,22 @@ public class Play implements Screen {
 
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
-        GameMap tempMap = null;
-        Player tempPlayer = null; // Biến tạm thời cho player
-        InputHandler tempInputHandler = null; // Biến tạm thời cho inputHandler
-        NormalMonster tempNormalMonster = null; // Biến tạm thời cho normalMonster
+        
         try {
-            gameMap = new GameMap("map/map.tmx", collisionBodyFactory); // Khởi tạo trực tiếp gameMap
-            Gdx.app.log("GameMap", "Bản đồ được tải thành công.");
-            tempPlayer = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500, 500, world);
-            tempInputHandler = new InputHandler(tempPlayer); // Khởi tạo inputHandler sau khi có player
-            bulletManager = new BulletManager(world, tempPlayer);
-            tempNormalMonster = new NormalMonster("sprites/blueMonster.png", 300, 300, world);
-            tempNormalMonster.createBody(world);
-
+            gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
+            Gdx.app.log("GameMap", "Map loaded successfully.");
+            
+            player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500, 500, world);
+            inputHandler = new InputHandler(player);
+            bulletManager = new BulletManager(world, player);
+            normalMonster = new NormalMonster("sprites/blueMonster.png", 300, 300, world);
+            normalMonster.createBody(world);
+            
         } catch (Exception e) {
-            Gdx.app.error("GameMap", "Không thể tải bản đồ.", e);
+            Gdx.app.error("GameMap", "Could not load map.", e);
             e.printStackTrace();
-            // Xử lý lỗi tải map, ví dụ:
-            Gdx.app.exit(); // Thoát game
-            return; // Thoát khỏi constructor
+            throw new RuntimeException("Failed to initialize game", e);
         }
-        gameMap = tempMap;
-        player = tempPlayer;
-        inputHandler = tempInputHandler;
-        normalMonster = tempNormalMonster;
 
         // Add debug logging for map layers
         Gdx.app.log("Play", "=== Map Layers Debug ===");
@@ -116,10 +109,6 @@ public class Play implements Screen {
         highgroundManager.debugPrintAreas();
 
         createCollisionBodies();
-
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500, 500, world);
-        inputHandler = new InputHandler(player);
-        bulletManager = new BulletManager(world, player);
 
         // Add UI stage and pause button
         uiStage = new Stage(new ScreenViewport());
