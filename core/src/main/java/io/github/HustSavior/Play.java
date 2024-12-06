@@ -23,9 +23,15 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.Application;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 
 import io.github.HustSavior.entities.Player;
+import io.github.HustSavior.items.AssetSetter;
 import io.github.HustSavior.bullet.Bullet;
+import io.github.HustSavior.items.Item;
 import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
@@ -33,6 +39,7 @@ import io.github.HustSavior.collision.CollisionBodyFactory;
 import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
+import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.bullet.BulletManager;
 
 public class Play implements Screen {
@@ -48,6 +55,9 @@ public class Play implements Screen {
     private final GameMap gameMap;
     private final Player player;
     private BulletManager bulletManager;
+    // Skill
+    private final AssetSetter assetSetter;
+    private final SkillManager skillManager;
     private final InputHandler inputHandler;
     private final World world;
 
@@ -58,6 +68,7 @@ public class Play implements Screen {
     private ShapeRenderer shapeRenderer;
     private CollisionBodyFactory collisionBodyFactory;
     private HighgroundManager highgroundManager;
+    private Skin skin;
 
     public Play(Game game) {
         // Set logging level to show debug messages
@@ -92,6 +103,10 @@ public class Play implements Screen {
                 500, 500, world);
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
+        assetSetter= new AssetSetter();
+        skillManager= new SkillManager(player, world);
+        skillManager.activateSkills(1);
+        loadItems();
 
         // Add UI stage and pause button
         uiStage = new Stage(new ScreenViewport());
@@ -114,6 +129,7 @@ public class Play implements Screen {
                 gameMap.getLayer("Roof"),
                 gameMap.getLayer("Parking"));
         shapeRenderer = new ShapeRenderer();
+        skin = new Skin(Gdx.files.internal("uiskin.json"));
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -131,6 +147,8 @@ public class Play implements Screen {
                 super.beginContact(contact);
                 // Manage collision for bullet
                 handleBulletCollision(contact);
+                // Manage collision for item
+                itemCollection(contact);
             }
         });
         return world;
@@ -144,6 +162,44 @@ public class Play implements Screen {
         } else if (fixtureB.getBody().getUserData() instanceof Bullet) {
             ((Bullet) fixtureB.getBody().getUserData()).incrementCollisionCount();
         }
+    }
+
+    private void itemCollection(Contact contact) {
+        Fixture fixtureA = contact.getFixtureA();
+        Fixture fixtureB = contact.getFixtureB();
+
+        Object userDataA = fixtureA.getBody().getUserData();
+        Object userDataB = fixtureB.getBody().getUserData();
+
+        if (userDataA instanceof Item && userDataB instanceof Player) {
+            Item item = (Item) userDataA;
+            if (!item.isCollected()) {
+                item.setCollected(true);
+                fixtureA.setSensor(true);  // Convert to sensor instead of destroying
+                assetSetter.objectAcquired(item);
+                showItemCollectedDialog();
+            }
+        } else if (userDataA instanceof Player && userDataB instanceof Item) {
+            Item item = (Item) userDataB;
+            if (!item.isCollected()) {
+                item.setCollected(true);
+                fixtureB.setSensor(true);  // Convert to sensor instead of destroying
+                assetSetter.objectAcquired(item);
+                showItemCollectedDialog();
+            }
+        }
+    }
+
+    private void showItemCollectedDialog() {
+        Dialog dialog = new Dialog("Item Collected", skin) {
+            @Override
+            protected void result(Object object) {
+                this.hide();
+            }
+        };
+        dialog.text("You have collected a new item!");
+        dialog.button("OK", true);
+        dialog.show(uiStage);
     }
 
     private void createCollisionBodies() {
@@ -160,6 +216,12 @@ public class Play implements Screen {
             }
 
         }
+    }
+
+    private void loadItems(){
+        assetSetter.createObject(500, 500, 1, PPM, world);
+        assetSetter.createObject(400, 400, 2, PPM, world);
+        assetSetter.createObject(300, 300, 3, PPM, world);
     }
 
     @Override
@@ -195,6 +257,7 @@ public class Play implements Screen {
         }
         updateCamera();
         bulletManager.update(delta);
+        skillManager.update(delta);
 
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
@@ -217,6 +280,8 @@ public class Play implements Screen {
         renderer.setView(camera);
         renderer.render();
         renderer.getBatch().begin();
+        skillManager.drawSkills((SpriteBatch)renderer.getBatch());
+        assetSetter.drawObject((SpriteBatch) renderer.getBatch());
         player.draw((SpriteBatch) renderer.getBatch(), camera);
         bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
         renderer.getBatch().end();

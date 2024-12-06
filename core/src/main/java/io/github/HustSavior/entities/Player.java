@@ -32,6 +32,8 @@ public class Player extends Sprite {
     public final Animation<TextureRegion> walkRight;
     private final Body body;
 
+    private static boolean facingLeft;
+
     // HP and XP
     private Texture healthBarTexture;
     private static final float HEALTH_BAR_WIDTH = 30f;
@@ -192,4 +194,16 @@ public class Player extends Sprite {
                 body.getPosition().x * GameConfig.PPM - getWidth() / 2,
                 body.getPosition().y * GameConfig.PPM - getHeight() / 2);
     }
+
+    public void acquireEffect(int id){
+        switch(id){
+            case 1: break;
+            default: ;
+        }
+
+    }
+
+    public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}
+    public boolean isFacingLeft(){return facingLeft;}
+    public float getPPM(){return PPM;}
 }
