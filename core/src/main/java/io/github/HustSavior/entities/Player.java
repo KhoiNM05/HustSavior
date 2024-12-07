@@ -1,5 +1,7 @@
 package io.github.HustSavior.entities;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
@@ -50,6 +52,15 @@ public class Player extends Sprite {
     private static final float XP_BAR_WIDTH = 750f;
     private static final float XP_BAR_HEIGHT = 10f;
     private static final float XP_BAR_OFFSET_Y = 15f;
+    // Shield
+    private static final float SHIELD_DURATION = 3f; // 10 seconds shield
+    private static final float SHIELD_ANIMATION_FRAME_DURATION = 0.1f; // Controls animation speed
+    private boolean shieldActive;
+    private float shieldTimeRemaining;
+    private Animation<TextureRegion> shieldAnimation;
+    private float shieldStateTime;
+    private TextureRegion[] shieldFrames;
+    private static final float SHIELD_ALPHA = 0.5f; // Transparent shield
 
     public Player(Sprite sprite, float x, float y, World world) {
         super(sprite);
@@ -66,6 +77,10 @@ public class Player extends Sprite {
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
+        // Shield
+        shieldActive = false;
+        shieldTimeRemaining = 0;
+        loadShieldAnimation();
     }
 
     public float getHealth() {
@@ -129,6 +144,28 @@ public class Player extends Sprite {
         float x = body.getPosition().x * GameConfig.PPM - getWidth() / 2;
         float y = body.getPosition().y * GameConfig.PPM - getHeight() / 2;
         setPosition(x, y);
+        // Shield
+        if (shieldActive) {
+            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
+            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
+            float shieldScale = 0.45f; // Adjust this value to change shield size
+            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
+            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
+
+            // Save current color
+            Color oldColor = batch.getColor();
+            // Set transparent color
+            batch.setColor(1, 1, 1, SHIELD_ALPHA);
+
+            batch.draw(currentFrame,
+                shieldX,
+                shieldY,
+                currentFrame.getRegionWidth() * shieldScale,
+                currentFrame.getRegionHeight() * shieldScale);
+
+            // Restore original color
+            batch.setColor(oldColor);
+        }
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
         float healthBarX = getX() - HEALTH_BAR_OFFSET_X;
@@ -199,6 +236,14 @@ public class Player extends Sprite {
         setPosition(
                 body.getPosition().x * GameConfig.PPM - getWidth() / 2,
                 body.getPosition().y * GameConfig.PPM - getHeight() / 2);
+        // Shield
+        if (shieldActive) {
+            shieldTimeRemaining -= delta;
+            if (shieldTimeRemaining <= 0) {
+                shieldActive = false;
+                shieldStateTime = 0;
+            }
+        }
     }
 
     public void stop() {
@@ -232,5 +277,22 @@ public class Player extends Sprite {
     public void resetMovement() {
         // Reset any movement-related states if needed
         getBody().setLinearVelocity(0, 0);
+    }
+    private void loadShieldAnimation() {
+        // Load all shield frames into array
+        shieldFrames = new TextureRegion[4];
+        for (int i = 0; i < 4; i++) {
+            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
+            shieldFrames[i] = new TextureRegion(texture);
+            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
+        }
+        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
+        shieldStateTime = 0;
+    }
+
+    public void activateShield() {
+        shieldActive = true;
+        shieldTimeRemaining = SHIELD_DURATION;
+        shieldStateTime = 0;
     }
 }

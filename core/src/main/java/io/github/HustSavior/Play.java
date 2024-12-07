@@ -35,12 +35,7 @@ import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.dialog.DialogManager;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.input.InputHandler;
-import io.github.HustSavior.items.AlgebraBook;
-import io.github.HustSavior.items.AssetSetter;
-import io.github.HustSavior.items.CalcBook;
-import io.github.HustSavior.items.HPPotion;
-import io.github.HustSavior.items.Item;
-import io.github.HustSavior.items.PhysicBook;
+import io.github.HustSavior.items.*;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
@@ -185,7 +180,7 @@ public class Play implements Screen {
         return world;
     }
 
-    private void handleBulletCollision(Contact contact) {
+    public void handleBulletCollision(Contact contact) {
         Fixture fixtureA = contact.getFixtureA();
         Fixture fixtureB = contact.getFixtureB();
         if (fixtureA.getBody().getUserData() instanceof Bullet) {
@@ -193,50 +188,6 @@ public class Play implements Screen {
         } else if (fixtureB.getBody().getUserData() instanceof Bullet) {
             ((Bullet) fixtureB.getBody().getUserData()).incrementCollisionCount();
         }
-    }
-
-    private void itemCollection(Contact contact) {
-        Fixture fixtureA = contact.getFixtureA();
-        Fixture fixtureB = contact.getFixtureB();
-
-        Object userDataA = fixtureA.getBody().getUserData();
-        Object userDataB = fixtureB.getBody().getUserData();
-
-        if (userDataA instanceof Item && userDataB instanceof Player) {
-            Item item = (Item) userDataA;
-            if (!item.isCollected()) {
-                item.setCollected(true);
-                fixtureA.setSensor(true); // Convert to sensor instead of destroying
-                if (item instanceof HPPotion) {
-                    player.heal(50);
-                }
-                assetSetter.objectAcquired(item);
-                showItemCollectedDialog();
-            }
-        } else if (userDataA instanceof Player && userDataB instanceof Item) {
-            Item item = (Item) userDataB;
-            if (!item.isCollected()) {
-                item.setCollected(true);
-                fixtureB.setSensor(true); // Convert to sensor instead of destroying
-                if (item instanceof HPPotion) {
-                    player.heal(50);
-                }
-                assetSetter.objectAcquired(item);
-                showItemCollectedDialog();
-            }
-        }
-    }
-
-    private void showItemCollectedDialog() {
-        Dialog dialog = new Dialog("Item Collected", skin) {
-            @Override
-            protected void result(Object object) {
-                this.hide();
-            }
-        };
-        dialog.text("You have collected a new item!");
-        dialog.button("OK", true);
-        dialog.show(uiStage);
     }
 
     private void createCollisionBodies() {
@@ -264,6 +215,7 @@ public class Play implements Screen {
         assetSetter.createObject(400, 400, 2, PPM, world);
         assetSetter.createObject(300, 300, 3, PPM, world);
         assetSetter.createObject(250, 250, 4, PPM, world);
+        assetSetter.createObject(400, 250, 5, PPM, world);
 
         // Register all items with the SpawnManager
         for (Item item : assetSetter.objectList) {
@@ -282,7 +234,7 @@ public class Play implements Screen {
         if (!isPaused && !dialogManager.isDialogActive()) {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
-            
+
             transparencyUpdateTimer += delta;
             if (transparencyUpdateTimer >= TRANSPARENCY_UPDATE_INTERVAL) {
                 transparencyManager.update(player);
@@ -464,22 +416,30 @@ public class Play implements Screen {
     }
 
     public void handleItemCollision(Contact contact) {
+        Fixture fixtureA = contact.getFixtureA();
+        Fixture fixtureB = contact.getFixtureB();
         Object userDataA = contact.getFixtureA().getBody().getUserData();
         Object userDataB = contact.getFixtureB().getBody().getUserData();
 
         if (userDataA instanceof Player && userDataB instanceof Item) {
-            handleItemCollision((Item) userDataB);
+            handleItemCollision((Item) userDataB, fixtureB);
         } else if (userDataB instanceof Player && userDataA instanceof Item) {
-            handleItemCollision((Item) userDataA);
+            handleItemCollision((Item) userDataA, fixtureA);
         }
     }
 
-    private void handleItemCollision(Item item) {
+    private void handleItemCollision(Item item, Fixture fixture) {
         if (!item.isCollected()) {
             inputHandler.setDialogActive(true);
             dialogManager.showItemPickupDialog(item.getDialogMessage(), item.getImagePath(), () -> {
                 item.setCollected(true);
+                fixture.setSensor(true);
                 assetSetter.objectAcquired(item);
+                if (item instanceof HPPotion) {
+                    player.heal(50);
+                } else if (item instanceof Shield) {
+                    player.activateShield();
+                }
                 inventoryTray.addItem(item.getImagePath());
                 inputHandler.setDialogActive(false);
             });
@@ -491,6 +451,7 @@ public class Play implements Screen {
         if (item instanceof AlgebraBook) return "Algebra Book";
         if (item instanceof PhysicBook) return "Physics Book";
         if (item instanceof HPPotion) return "Health Potion";
+        if (item instanceof Shield) return "Shield";
         return "Unknown Item";
     }
 
@@ -499,18 +460,10 @@ public class Play implements Screen {
         Object userDataA = contact.getFixtureA().getBody().getUserData();
         Object userDataB = contact.getFixtureB().getBody().getUserData();
 
-        // Handle item collisions
         if (userDataA instanceof Player && userDataB instanceof Item) {
-            handleItemCollision((Item) userDataB);
+            handleItemCollision((Item) userDataB, contact.getFixtureB());
         } else if (userDataB instanceof Player && userDataA instanceof Item) {
-            handleItemCollision((Item) userDataA);
-        }
-
-        // Handle transparency zone collisions
-        if (userDataA instanceof Player) {
-            transparencyManager.onPlayerEnter(contact.getFixtureB());
-        } else if (userDataB instanceof Player) {
-            transparencyManager.onPlayerEnter(contact.getFixtureA());
+            handleItemCollision((Item) userDataA, contact.getFixtureA());
         }
     }
 

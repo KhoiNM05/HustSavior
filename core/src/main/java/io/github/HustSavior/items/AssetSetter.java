@@ -31,6 +31,9 @@ public class AssetSetter {
             case 4:
                 objectList.add(new HPPotion(new Sprite(new Texture("item/hp_potion.png")), x, y, PPM, world));
                 break;
+            case 5:
+                objectList.add(new Shield(new Sprite(new Texture("item/shield.png")), x, y, PPM, world));
+                break;
             default:
         }
     }

@@ -28,7 +28,7 @@ public class BulletManager {
         while (iterator.hasNext()) {
             Bullet bullet = iterator.next();
             bullet.update(delta);
-            if (bullet.getCollisionCount() >= 5) {
+            if (bullet.getCollisionCount() >= 3) {
                 iterator.remove();
             }
         }

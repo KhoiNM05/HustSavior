@@ -16,6 +16,7 @@ public class CollisionListener implements ContactListener {
     @Override
     public void beginContact(Contact contact) {
         play.handleItemCollision(contact);
+        play.handleBulletCollision(contact);
     }
 
     @Override
@@ -29,4 +30,4 @@ public class CollisionListener implements ContactListener {
     @Override
     public void postSolve(Contact contact, ContactImpulse impulse) {
     }
-} 
+}
