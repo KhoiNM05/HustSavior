@@ -43,11 +43,15 @@ import io.github.HustSavior.items.Item;
 import io.github.HustSavior.items.PhysicBook;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
+import io.github.HustSavior.map.LowgroundManager;
 import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.spawn.SpawnManager;
+import io.github.HustSavior.ui.GameTimer;
+import io.github.HustSavior.ui.InventoryTray;
 import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
+import io.github.HustSavior.utils.transparency.TreeTransparencyManager;
 
 public class Play implements Screen {
     private final float PPM = GameConfig.PPM;
@@ -57,6 +61,7 @@ public class Play implements Screen {
     private static final float MAX_ZOOM = 20f;
     private static final float WORLD_STEP_TIME = 1 / 60f;
     private static final float WARNING_COOLDOWN_TIME = 2f; // Cooldown time in seconds
+    private static final float TRANSPARENCY_UPDATE_INTERVAL = 1/30f; // Update 30 times per second
 
     private final OrthographicCamera camera;
     private final Viewport viewport;
@@ -82,6 +87,11 @@ public class Play implements Screen {
     private float warningCooldown = 0;
     private DialogManager dialogManager;
     private SpawnManager spawnManager;
+    private float transparencyUpdateTimer = 0;
+    private TreeTransparencyManager treeTransparencyManager;
+    private LowgroundManager lowgroundManager;
+    private GameTimer gameTimer;
+    private InventoryTray inventoryTray;
 
     public Play(Game game) {
         // Set logging level to show debug messages
@@ -113,6 +123,9 @@ public class Play implements Screen {
             gameMap.getLayer("Parking")
         );
 
+        // Add tree transparency manager initialization
+        treeTransparencyManager = new TreeTransparencyManager(gameMap.getTiledMap());
+
         player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
                 500, 500, world);
         inputHandler = new InputHandler(player);
@@ -136,6 +149,7 @@ public class Play implements Screen {
         stage = new Stage(new ScreenViewport());
         stage.getViewport().update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 
+        gameTimer = new GameTimer(stage);
 
         // Make sure input processor is set up correctly
         InputMultiplexer multiplexer = new InputMultiplexer();
@@ -151,6 +165,11 @@ public class Play implements Screen {
         // Initialize transparency manager with map layers
         shapeRenderer = new ShapeRenderer();
         skin = new Skin(Gdx.files.internal("uiskin.json"));
+
+        lowgroundManager = new LowgroundManager(gameMap.getTiledMap());
+
+        Skin inventorySkin = new Skin(Gdx.files.internal("UI/itemtray/itemtray.json"));
+        inventoryTray = new InventoryTray(stage, inventorySkin);
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -260,26 +279,27 @@ public class Play implements Screen {
     @Override
     public void render(float delta) {
         clearScreen();
-        // Only update game and allow movement if dialog is not active
         if (!isPaused && !dialogManager.isDialogActive()) {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
+            
+            transparencyUpdateTimer += delta;
+            if (transparencyUpdateTimer >= TRANSPARENCY_UPDATE_INTERVAL) {
+                transparencyManager.update(player);
+                treeTransparencyManager.update(player);
+                transparencyUpdateTimer = 0;
+            }
         } else {
-            // Stop player movement while dialog is active
             player.stopMovement();
         }
 
         drawGame();
 
-        // Draw UI elements
         uiStage.act(delta);
         uiStage.draw();
 
-        transparencyManager.update(player);
-
         checkCollisions();
 
-        // Update stage viewport to match screen size
         stage.getViewport().update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
         stage.act(delta);
         stage.draw();
@@ -288,7 +308,8 @@ public class Play implements Screen {
         stage.act(delta);
         stage.draw();
 
-        // Update item visibilities based on player position
+        gameTimer.update(delta);
+
         Vector2 playerPos = new Vector2(
             player.getBody().getPosition().x * PPM,
             player.getBody().getPosition().y * PPM
@@ -313,6 +334,7 @@ public class Play implements Screen {
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
         Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
+        adjustedPos = lowgroundManager.updatePosition(adjustedPos.x,adjustedPos.y);
         // Convert back to Box2D coordinates (divide by PPM) and set the body position
         player.getBody().setTransform(adjustedPos.x / PPM, adjustedPos.y / PPM, player.getBody().getAngle());
 
@@ -363,6 +385,8 @@ public class Play implements Screen {
         uiStage.dispose();
         shapeRenderer.dispose();
         stage.dispose();
+        gameTimer.dispose();
+        inventoryTray.dispose();
     }
 
     @Override
@@ -456,6 +480,7 @@ public class Play implements Screen {
             dialogManager.showItemPickupDialog(item.getDialogMessage(), item.getImagePath(), () -> {
                 item.setCollected(true);
                 assetSetter.objectAcquired(item);
+                inventoryTray.addItem(item.getImagePath());
                 inputHandler.setDialogActive(false);
             });
         }
@@ -474,13 +499,36 @@ public class Play implements Screen {
         Object userDataA = contact.getFixtureA().getBody().getUserData();
         Object userDataB = contact.getFixtureB().getBody().getUserData();
 
+        // Handle item collisions
         if (userDataA instanceof Player && userDataB instanceof Item) {
             handleItemCollision((Item) userDataB);
         } else if (userDataB instanceof Player && userDataA instanceof Item) {
             handleItemCollision((Item) userDataA);
         }
+
+        // Handle transparency zone collisions
+        if (userDataA instanceof Player) {
+            transparencyManager.onPlayerEnter(contact.getFixtureB());
+        } else if (userDataB instanceof Player) {
+            transparencyManager.onPlayerEnter(contact.getFixtureA());
+        }
+    }
+
+    private void endContact(Contact contact) {
+        Object userDataA = contact.getFixtureA().getBody().getUserData();
+        Object userDataB = contact.getFixtureB().getBody().getUserData();
+
+        // Handle transparency zone exits
+        if (userDataA instanceof Player) {
+            transparencyManager.onPlayerExit(contact.getFixtureB());
+        } else if (userDataB instanceof Player) {
+            transparencyManager.onPlayerExit(contact.getFixtureA());
+        }
     }
 }
+
+
+
 
 
 
