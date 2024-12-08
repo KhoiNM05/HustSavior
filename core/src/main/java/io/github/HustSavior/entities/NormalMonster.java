@@ -46,6 +46,7 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
 
         // Use the provided texture directly
         this.spriteSheet = texture;
+        setRegion(texture);
         Gdx.app.log("NormalMonster", "Texture loaded: " + (this.spriteSheet != null)); // Log here
         setSize(texture.getWidth()/PPM, texture.getHeight()/PPM);
 
@@ -56,64 +57,6 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
         createBody(world);
     }
 
-    // Constructor
-    /*
-    public NormalMonster(String spriteSheetPath, float x, float y, World world) {
-        this.hp = hp;
-        this.attack = attack;
-        this.speed = speed;
-        this.spriteSheetPath = spriteSheetPath;
-        setPosition(x / PPM, y / PPM);
-
-        try {
-            spriteSheet = new Texture(Gdx.files.internal(spriteSheetPath));
-            if (spriteSheet == null) {
-                Gdx.app.error("NormalMonster", "Texture is null for path: " + spriteSheetPath);
-                return;
-            }
-            setSize(spriteSheet.getWidth() / 8f, spriteSheet.getHeight() / 6f);
-            initializeAnimations();
-        } catch (Exception e) {
-            Gdx.app.error("NormalMonster", "Failed to load texture: " + spriteSheetPath, e);
-        }
-
-        Texture spriteSheet = new Texture(Gdx.files.internal(spriteSheetPath));
-        movingAnimation = extractAnimation(spriteSheet, 0, 8, 0.1f);  // Hàng 0: MOVING
-        hittedAnimation = extractAnimation(spriteSheet, 4, 4, 0.2f);
-    }
-
-    private Animation<TextureRegion> extractAnimation(Texture spriteSheet, int row, int frameCount, float frameDuration) {
-        TextureRegion[][] tmpFrames = TextureRegion.split(spriteSheet,
-            spriteSheet.getWidth() / frameCount, // Chia theo số frame trên mỗi hàng
-            spriteSheet.getHeight() / 6 // Giả định sprite sheet có 3 hàng
-        );
-
-        // Lấy hàng chỉ định
-        TextureRegion[] animationFrames = new TextureRegion[frameCount];
-        for (int i = 0; i < frameCount; i++) {
-            animationFrames[i] = tmpFrames[row][i];
-        }
-
-        return new Animation<>(frameDuration, animationFrames);
-    }
-
-
-    private void initializeAnimations() {
-        if (spriteSheet == null) {
-            Gdx.app.error("NormalMonster", "Sprite sheet is null, cannot initialize animations");
-            return;
-        }
-
-        try {
-            movingAnimation = extractAnimation(spriteSheet, 0, 8, 0.1f); // Hàng 0: Di chuyển
-            Animation<TextureRegion> attackAnimation = extractAnimation(spriteSheet, 2, 6, 0.15f); // Hàng 2: Tấn công
-            hittedAnimation = extractAnimation(spriteSheet, 4, 4, 0.2f); // Hàng 4: Bị đánh
-        } catch (Exception e) {
-            Gdx.app.error("NormalMonster", "Error initializing animations", e);
-        }
-    }
-
-     */
 
     public void createBody(World world) {
         BodyDef bodyDef = new BodyDef();
@@ -139,6 +82,7 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
         Fixture fixture = body.createFixture(fixtureDef);
         fixture.setUserData(this); // Gán `this` (NormalMonster) cho `userData`
         shape.dispose();
+
     }
 
     public void hitByPlayer(Player player) {
@@ -229,7 +173,7 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
         batch.draw(getTexture(), pixelX, pixelY, getWidth() * GameConfig.PPM, getHeight() * GameConfig.PPM);
 
         // Ghi log để kiểm tra
-        Gdx.app.log("NormalMonster.draw", "Đang vẽ quái vật tại (mét): (" + pixelX + ", " + pixelY + ")");
+      //  Gdx.app.log("NormalMonster.draw", "Đang vẽ quái vật tại (mét): (" + pixelX + ", " + pixelY + ")");
     }
 
     @Override
