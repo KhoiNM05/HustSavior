@@ -22,8 +22,8 @@ import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -33,14 +33,22 @@ import io.github.HustSavior.bullet.BulletManager;
 import io.github.HustSavior.collision.CollisionBodyFactory;
 import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.dialog.DialogManager;
+import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.input.InputHandler;
-import io.github.HustSavior.items.*;
+import io.github.HustSavior.items.AlgebraBook;
+import io.github.HustSavior.items.AssetSetter;
+import io.github.HustSavior.items.CalcBook;
+import io.github.HustSavior.items.HPPotion;
+import io.github.HustSavior.items.Item;
+import io.github.HustSavior.items.PhysicBook;
+import io.github.HustSavior.items.Shield;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
 import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.spawn.SpawnManager;
+import io.github.HustSavior.spawner.MonsterSpawnManager;
 import io.github.HustSavior.ui.GameTimer;
 import io.github.HustSavior.ui.InventoryTray;
 import io.github.HustSavior.ui.PauseButton;
@@ -87,6 +95,8 @@ public class Play implements Screen {
     private LowgroundManager lowgroundManager;
     private GameTimer gameTimer;
     private InventoryTray inventoryTray;
+    private Array<AbstractMonster> monsters;
+    private MonsterSpawnManager monsterSpawnManager;
 
     public Play(Game game) {
         // Set logging level to show debug messages
@@ -121,8 +131,12 @@ public class Play implements Screen {
         // Add tree transparency manager initialization
         treeTransparencyManager = new TreeTransparencyManager(gameMap.getTiledMap());
 
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
-                500, 500, world);
+        player = new Player(
+            new Sprite(new Texture("sprites/WalkRight1.png")),
+            500,    // Multiply by PPM to convert to world coordinates
+            500,    // Multiply by PPM to convert to world coordinates
+            world
+        );
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
         assetSetter = new AssetSetter();
@@ -165,6 +179,10 @@ public class Play implements Screen {
 
         Skin inventorySkin = new Skin(Gdx.files.internal("UI/itemtray/itemtray.json"));
         inventoryTray = new InventoryTray(stage, inventorySkin);
+
+        // Initialize monster array and spawn manager
+        monsters = new Array<>();
+        monsterSpawnManager = new MonsterSpawnManager(world, player, monsters, camera, gameMap.getTiledMap());
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -292,6 +310,23 @@ public class Play implements Screen {
 
         // Update item visibility based on player position
         spawnManager.updateItemVisibilities(new Vector2(player.getX(), player.getY()));
+
+        // Update monster spawner and monsters
+        monsterSpawnManager.update(delta);
+        
+        // Update all monsters
+        for (AbstractMonster monster : monsters) {
+            monster.update(delta, player);
+        }
+        
+        // Remove dead monsters
+        for (int i = monsters.size - 1; i >= 0; i--) {
+            if (!monsters.get(i).isAlive()) {
+                AbstractMonster monster = monsters.removeIndex(i);
+                monster.dispose(); // Make sure to clean up resources
+                world.destroyBody(monster.getBody());
+            }
+        }
     }
 
     private void updateCamera() {
@@ -312,6 +347,12 @@ public class Play implements Screen {
         assetSetter.drawObject((SpriteBatch) renderer.getBatch());
         player.draw((SpriteBatch) renderer.getBatch(), camera);
         bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
+
+        // Draw monsters
+        for (AbstractMonster monster : monsters) {
+            monster.render((SpriteBatch) renderer.getBatch());
+        }
+
         renderer.getBatch().end();
 
         // Draw debug outline
@@ -339,6 +380,12 @@ public class Play implements Screen {
         stage.dispose();
         gameTimer.dispose();
         inventoryTray.dispose();
+
+        // Dispose monsters
+        for (AbstractMonster monster : monsters) {
+            monster.dispose();
+        }
+        monsters.clear();
     }
 
     @Override
@@ -479,6 +526,10 @@ public class Play implements Screen {
         }
     }
 }
+
+
+
+
 
 
 
