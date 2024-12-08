@@ -9,8 +9,7 @@ buildscript {
     maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
   }
   dependencies {
-
-
+    classpath "com.badlogicgames.gdx:gdx:1.12.0"
   }
 }
 
@@ -54,6 +53,10 @@ configure(subprojects) {
 
   compileJava {
     options.incremental = true
+  }
+
+  tasks.withType(ProcessResources) {
+    doNotTrackState("Resource processing is not tracking state")
   }
 }
 

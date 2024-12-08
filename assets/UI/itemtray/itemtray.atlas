@@ -1,0 +1,27 @@
+
+itemtray.png
+size: 512, 512
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+at01(1)
+  rotate: false
+  xy: 1, 475
+  size: 506, 30
+  orig: 506, 30
+  offset: 0, 0
+  index: -1
+Inventory Cell
+  rotate: false
+  xy: 1, 407
+  size: 32, 32
+  orig: 32, 32
+  offset: 0, 0
+  index: -1
+items
+  rotate: false
+  xy: 1, 441
+  size: 256, 32
+  orig: 256, 32
+  offset: 0, 0
+  index: -1

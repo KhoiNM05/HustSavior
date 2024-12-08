@@ -1,0 +1,27 @@
+
+sfxVolumeControl.png
+size: 512, 512
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+Speaker-2
+  rotate: false
+  xy: 1, 287
+  size: 56, 56
+  orig: 56, 56
+  offset: 0, 0
+  index: -1
+Speaker-Crossed-1
+  rotate: false
+  xy: 1, 229
+  size: 52, 56
+  orig: 52, 56
+  offset: 0, 0
+  index: -1
+shlop rg
+  rotate: false
+  xy: 1, 345
+  size: 506, 160
+  orig: 506, 160
+  offset: 0, 0
+  index: -1
