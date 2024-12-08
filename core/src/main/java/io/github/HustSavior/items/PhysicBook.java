@@ -7,7 +7,7 @@ public class PhysicBook extends Item{
     public PhysicBook(Sprite sprite, int x, int y, float PPM, World world){
         super(sprite, x, y, PPM, world);
         this.imagePath = "item/physic1.jpg";
-        this.dialogMessage = "You got a Physics Book!\nTime to learn about forces!";
+        this.dialogMessage = "a Physics Book!\nTime to learn about forces";
     }
 
 

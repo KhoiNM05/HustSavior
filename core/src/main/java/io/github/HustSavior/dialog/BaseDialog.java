@@ -18,7 +18,7 @@ public abstract class BaseDialog {
     protected int currentCharIndex;
     protected float charTimer;
     protected static final float AUTO_CLOSE_DELAY = 2f;
-    protected static final float CHAR_DELAY = 0.05f;
+    protected static final float CHAR_DELAY = 0.02f;
 
     public BaseDialog(Stage stage, Skin skin, InputHandler inputHandler) {
         this.stage = stage;
@@ -37,7 +37,7 @@ public abstract class BaseDialog {
 
     public boolean update(float delta) {
         if (!isActive) return false;
-        
+
         if (currentCharIndex < fullMessage.length()) {
             charTimer += delta;
             if (charTimer >= CHAR_DELAY) {
@@ -75,4 +75,4 @@ public abstract class BaseDialog {
             }
         }, AUTO_CLOSE_DELAY);
     }
-} 
+}

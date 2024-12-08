@@ -8,7 +8,7 @@ public class HPPotion extends Item {
         super(sprite, x, y, PPM, world);
         sprite.setSize(sprite.getRegionWidth() * 0.05f, sprite.getRegionHeight() * 0.05f);
         this.imagePath = "item/hp_potion.png";
-        this.dialogMessage = "You got a Health Potion!\nRestores 50 HP!";
+        this.dialogMessage = "a Health Potion!\nRestores 50 HP";
     }
 }
 
