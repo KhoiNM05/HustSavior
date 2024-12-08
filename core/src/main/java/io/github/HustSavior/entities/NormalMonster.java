@@ -40,7 +40,24 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
     private Body body;
     private boolean isHitted = false;
 
+    // New constructor for single texture
+    public NormalMonster(Texture texture, float x, float y, World world) {
+        setPosition(x/PPM, y/PPM);
+
+        // Use the provided texture directly
+        this.spriteSheet = texture;
+        Gdx.app.log("NormalMonster", "Texture loaded: " + (this.spriteSheet != null)); // Log here
+        setSize(texture.getWidth()/PPM, texture.getHeight()/PPM);
+
+        // Create a simple animation from the single texture
+        TextureRegion[] singleFrameAnimation = new TextureRegion[] { new TextureRegion(texture) };
+        movingAnimation = new Animation<>(1f, singleFrameAnimation);
+        hittedAnimation = movingAnimation;
+        createBody(world);
+    }
+
     // Constructor
+    /*
     public NormalMonster(String spriteSheetPath, float x, float y, World world) {
         this.hp = hp;
         this.attack = attack;
@@ -80,6 +97,7 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
         return new Animation<>(frameDuration, animationFrames);
     }
 
+
     private void initializeAnimations() {
         if (spriteSheet == null) {
             Gdx.app.error("NormalMonster", "Sprite sheet is null, cannot initialize animations");
@@ -95,10 +113,12 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
         }
     }
 
+     */
+
     public void createBody(World world) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(getX() * PPM, getY() * PPM);
+        bodyDef.position.set(getX(), getY());
         bodyDef.fixedRotation = true; // Prevent rotation
 
         body = world.createBody(bodyDef);
@@ -153,8 +173,8 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
 
         // Đồng bộ vị trí vật lý và sprite
         setPosition(
-            body.getPosition().x * PPM - getWidth() / 2,
-            body.getPosition().y * PPM - getHeight() / 2
+            body.getPosition().x - getWidth() / 2,
+            body.getPosition().y - getHeight() / 2
         );
     }
 
@@ -195,22 +215,21 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
     }
 
     public void draw(SpriteBatch batch) {
-        if (batch == null) {
-            Gdx.app.error("NormalMonster", "SpriteBatch is null in draw method");
+        if (body == null) {
+            Gdx.app.error("NormalMonster.draw", "Body chưa được khởi tạo.");
             return;
         }
+        if (this.getTexture() == null) {
+            Gdx.app.error("NormalMonster.draw", "Texture không hợp lệ.");
+            return;
+        }
+        // Lấy vị trí từ Box2D body
+        float pixelX = body.getPosition().x * GameConfig.PPM;
+        float pixelY = body.getPosition().y * GameConfig.PPM;
+        batch.draw(getTexture(), pixelX, pixelY, getWidth() * GameConfig.PPM, getHeight() * GameConfig.PPM);
 
-        // Lấy frame hiện tại từ hoạt ảnh
-        TextureRegion currentFrame = getCurrentAnimation().getKeyFrame(stateTime, true);
-
-        // Vẽ quái vật
-        batch.draw(
-            currentFrame,
-            body.getPosition().x * GameConfig.PPM - getWidth() / 2,
-            body.getPosition().y * GameConfig.PPM - getHeight() / 2,
-            getWidth(),
-            getHeight()
-        );
+        // Ghi log để kiểm tra
+        Gdx.app.log("NormalMonster.draw", "Đang vẽ quái vật tại (mét): (" + pixelX + ", " + pixelY + ")");
     }
 
     @Override
@@ -225,11 +244,6 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
             isHitted = true;
             hittedTimer = hittedDuration;
         }
-    }
-
-
-    public void dispose() {
-        spriteSheet.dispose();
     }
 
     public Vector2 getPosition() {
@@ -256,4 +270,18 @@ public class NormalMonster extends Sprite implements MonsterBehavior{
     public float getSpeed(){
         return speed;
     }
+
+    public void dispose() {
+        spriteSheet.dispose();
+    }
+//    @Override
+//    public float getX() {
+//        return body.getPosition().x * GameConfig.PPM; // Chuyển đổi từ Box2D sang pixel
+//    }
+//
+//    @Override
+//    public float getY() {
+//        return body.getPosition().y * GameConfig.PPM; // Chuyển đổi từ Box2D sang pixel
+//    }
+
 }

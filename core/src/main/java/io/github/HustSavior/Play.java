@@ -82,17 +82,21 @@ public class Play implements Screen {
 
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
-        
+
         try {
             gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
             Gdx.app.log("GameMap", "Map loaded successfully.");
-            
+
             player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")), 500, 500, world);
             inputHandler = new InputHandler(player);
             bulletManager = new BulletManager(world, player);
-            normalMonster = new NormalMonster("sprites/blueMonster.png", 300, 300, world);
+          //  normalMonster = new NormalMonster("sprites/blueMonster.png", 300, 300, world);
+          //  normalMonster.createBody(world);
+            Texture monsterTexture = new Texture(Gdx.files.internal("sprites/testMonster.png"));
+
+            normalMonster = new NormalMonster(monsterTexture, 1384, 320, world);
             normalMonster.createBody(world);
-            
+
         } catch (Exception e) {
             Gdx.app.error("GameMap", "Could not load map.", e);
             e.printStackTrace();
@@ -133,7 +137,8 @@ public class Play implements Screen {
         shapeRenderer = new ShapeRenderer();
 
         // Spawn initial monsters
-        spawnMonsters(5, 100);
+        //spawnMonsters(5, 100);
+        spawnMonsterAtFixedLocation();
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -178,7 +183,7 @@ public class Play implements Screen {
 
         return true; // Không nằm trong khu vực va chạm
     }
-
+/*
     private void spawnMonsters(int numberOfMonsters, float spawnRadius) {
         for (int i = 0; i < numberOfMonsters; i++) {
             int maxAttempts = 5; // Số lần thử tối đa
@@ -207,6 +212,78 @@ public class Play implements Screen {
                 monsters.add(monster); // Thêm vào danh sách quản lý
             }
         }
+    }
+
+ */
+/*
+    private void spawnMonsters(int numberOfMonsters, float spawnRadius) {
+        // Preload the texture
+        Texture monsterTexture = new Texture("sprites/blueMonster.png");
+
+        for (int i = 0; i < numberOfMonsters; i++) {
+            int maxAttempts = 5;
+            boolean validLocationFound = false;
+
+            float x = 0;
+            float y = 0;
+
+            for (int attempts = 0; attempts < maxAttempts; attempts++) {
+                float angle = MathUtils.random(0, 360);
+                x = player.getX() + MathUtils.cosDeg(angle) * spawnRadius;
+                y = player.getY() + MathUtils.sinDeg(angle) * spawnRadius;
+
+                if (isValidSpawnLocation(x, y)) {
+                    validLocationFound = true;
+                    break;
+                }
+            }
+
+            // If a valid location is found, create monster
+            if (validLocationFound) {
+                NormalMonster monster = new NormalMonster(monsterTexture, x, y, world);
+                monster.createBody(world);
+                monsters.add(monster);
+            }
+        }
+    }
+
+ */
+ /*
+    private void spawnMonsters(int numberOfMonsters, float spawnRadius) {
+        for (int i = 0; i < numberOfMonsters; i++) {
+        // Spawn quái vật ở vị trí (100, 100)
+        Texture monsterTexture = new Texture("sprites/test.png");
+            if (monsterTexture == null) {
+                Gdx.app.error("Play", "Texture không được tải thành công: sprites/testMonster.png");
+            }
+            NormalMonster monster = new NormalMonster(monsterTexture, 1385, 320, world);
+        monster.createBody(world);
+        monsters.add(monster);
+        Gdx.app.log("SpawnMonsters", "Số lượng quái vật: " + monsters.size);
+            Gdx.app.log("SpawnMonsters", "Quái vật được spawn tại (" + monster.getX()+ ", " + monster.getY() + ")");
+
+        }
+    }
+
+  */
+
+    private void spawnMonsterAtFixedLocation() {
+        // Tạo texture cho quái vật
+        Texture monsterTexture = new Texture("sprites/player.png");
+
+        // Xác định vị trí cố định (ví dụ: 300, 300)
+        float fixedX = 5;
+        float fixedY = 5;
+
+        // Tạo quái vật
+        NormalMonster normalMonster = new NormalMonster(monsterTexture, fixedX, fixedY, world);
+        normalMonster.createBody(world);
+
+        // Thêm quái vật vào danh sách
+    //    monsters.add(normalMonster);
+
+        // Log để kiểm tra
+        Gdx.app.log("SpawnMonster", "Quái vật được spawn tại vị trí cố định: (" + fixedX/PPM + ", " + fixedY/PPM + ")");
     }
 
     private void updateMonsters(float delta) {
@@ -274,22 +351,30 @@ public class Play implements Screen {
         drawGame();
         uiStage.act(delta);
         uiStage.draw();
+      //  Gdx.app.log("Camera", "Camera tại (" + camera.position.x + ", " + camera.position.y + "), zoom: " + camera.zoom);
+
     }
 
     private void clearScreen() {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
     }
-
+/*
     private void drawMonster() {
         batch.begin(); // Bắt đầu vẽ
         for (MonsterBehavior monster : monsters) {
             if (monster instanceof NormalMonster) {
-                ((NormalMonster) monster).draw(batch); // Vẽ từng quái vật
+                NormalMonster normalMonster = (NormalMonster) monster;
+                normalMonster.draw(batch);// Vẽ từng quái vật
+                Gdx.app.log("DrawMonster", "Vẽ quái vật tại (" + normalMonster.getX() + ", " + normalMonster.getY() + ")");
             }
         }
         batch.end(); // Kết thúc vẽ
     }
+
+ */
+
+
 
     private void updateGame(float delta) {
         inputHandler.update(delta);
@@ -301,8 +386,8 @@ public class Play implements Screen {
 
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
-        Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
-        player.getBody().setTransform(adjustedPos.x / PPM, adjustedPos.y / PPM, player.getBody().getAngle());
+        Vector2 adjustedPos = highgroundManager.updatePosition(currentPos.x , currentPos.y );
+        player.getBody().setTransform(adjustedPos.x, adjustedPos.y, player.getBody().getAngle());
 
         // Cập nhật độ trong suốt của building
         transparencyManager.update(player);
@@ -331,6 +416,17 @@ public class Play implements Screen {
         player.drawDebug(shapeRenderer);
     }
 
+    private void drawMonster() {
+        if (normalMonster != null) { // Kiểm tra quái vật có tồn tại không
+            batch.begin(); // Bắt đầu vẽ
+            normalMonster.draw(batch); // Vẽ quái vật
+            Gdx.app.log("DrawMonster", "Vẽ quái vật tại (" + normalMonster.getX()+ ", " + normalMonster.getY() + ")");
+            batch.end(); // Kết thúc vẽ
+        } else {
+            Gdx.app.error("DrawMonster", "Quái vật không được khởi tạo.");
+        }
+    }
+
     private void handleZoom() {
         if (Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
             camera.zoom -= ZOOM_SPEED;
@@ -348,6 +444,15 @@ public class Play implements Screen {
         world.dispose();
         uiStage.dispose();
         shapeRenderer.dispose();
+        for (MonsterBehavior monster : monsters) {
+            if (monster instanceof NormalMonster) {
+                ((NormalMonster) monster).dispose();
+            }
+        }
+        if (batch != null){
+            batch.dispose();
+            batch = null;
+        }
     }
 
     @Override
