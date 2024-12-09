@@ -6,6 +6,7 @@ import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.World;
 
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.GameConfig;
@@ -17,8 +18,8 @@ public class TreeTransparencyManager extends TransparencyManager {
     private final MapLayer[] treeLayers;
     private final MapLayer[] boundLayers;
     
-    public TreeTransparencyManager(TiledMap map) {
-        super(map);
+    public TreeTransparencyManager(World world, TiledMap map) {
+        super(map, world);
         this.treeLayers = new MapLayer[NUMBER_OF_TREE_LAYERS];
         this.boundLayers = new MapLayer[NUMBER_OF_TREE_LAYERS];
         

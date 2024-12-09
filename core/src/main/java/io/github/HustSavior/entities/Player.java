@@ -70,6 +70,8 @@ public class Player extends Sprite {
 
     private World world;
 
+    private float alpha = 1.0f;
+
     public Player(Sprite sprite, float x, float y, World world) {
         super(sprite);
         this.world = world;
@@ -158,7 +160,20 @@ public class Player extends Sprite {
     }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
+        Color oldColor = batch.getColor();
+        float finalAlpha = alpha;
+        
+        // If shield is active, use shield alpha instead
+        if (shieldActive) {
+            finalAlpha = SHIELD_ALPHA;
+        }
+        
+        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
         super.draw(batch);
+        
+        // Restore original color
+        batch.setColor(oldColor);
+        
         float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
         float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
@@ -172,7 +187,7 @@ public class Player extends Sprite {
             float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
 
             // Save current color
-            Color oldColor = batch.getColor();
+            oldColor = batch.getColor();
             // Set transparent color
             batch.setColor(1, 1, 1, SHIELD_ALPHA);
 
@@ -328,5 +343,13 @@ public class Player extends Sprite {
             isKnockedBack = true;
             knockbackTimer = KNOCKBACK_DURATION;
         }
+    }
+
+    public boolean isKnockedBack() {
+        return isKnockedBack;
+    }
+
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
     }
 }

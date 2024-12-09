@@ -17,6 +17,7 @@ import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.Fixture;
@@ -116,9 +117,9 @@ public class Play implements Screen {
 
         // Initialize highground manager
         highgroundManager = new HighgroundManager(gameMap.getTiledMap());
-
         // Initialize transparency manager
         transparencyManager = new BuildingTransparencyManager(
+            world,
             gameMap.getTiledMap(),
             gameMap.getLayer("D3"),
             gameMap.getLayer("D5"),
@@ -127,14 +128,13 @@ public class Play implements Screen {
             gameMap.getLayer("Roof"),
             gameMap.getLayer("Parking")
         );
-
         // Add tree transparency manager initialization
-        treeTransparencyManager = new TreeTransparencyManager(gameMap.getTiledMap());
+        treeTransparencyManager = new TreeTransparencyManager(world, gameMap.getTiledMap());
 
         player = new Player(
             new Sprite(new Texture("sprites/WalkRight1.png")),
-            500,    // Multiply by PPM to convert to world coordinates
-            500,    // Multiply by PPM to convert to world coordinates
+            200,    // Multiply by PPM to convert to world coordinates
+            200,    // Multiply by PPM to convert to world coordinates
             world
         );
         inputHandler = new InputHandler(player);
@@ -183,6 +183,10 @@ public class Play implements Screen {
         // Initialize monster array and spawn manager
         monsters = new Array<>();
         monsterSpawnManager = new MonsterSpawnManager(world, player, monsters, camera, gameMap.getTiledMap());
+
+        for (AbstractMonster monster : monsters) {
+            transparencyManager.addMonster(monster);
+        }
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -300,6 +304,7 @@ public class Play implements Screen {
         updateCamera();
         bulletManager.update(delta);
         skillManager.update(delta);
+        updateMonsters(delta);
 
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
@@ -310,23 +315,6 @@ public class Play implements Screen {
 
         // Update item visibility based on player position
         spawnManager.updateItemVisibilities(new Vector2(player.getX(), player.getY()));
-
-        // Update monster spawner and monsters
-        monsterSpawnManager.update(delta);
-        
-        // Update all monsters
-        for (AbstractMonster monster : monsters) {
-            monster.update(delta, player);
-        }
-        
-        // Remove dead monsters
-        for (int i = monsters.size - 1; i >= 0; i--) {
-            if (!monsters.get(i).isAlive()) {
-                AbstractMonster monster = monsters.removeIndex(i);
-                monster.dispose(); // Make sure to clean up resources
-                world.destroyBody(monster.getBody());
-            }
-        }
     }
 
     private void updateCamera() {
@@ -341,23 +329,39 @@ public class Play implements Screen {
     private void drawGame() {
         OrthogonalTiledMapRenderer renderer = gameMap.getRenderer();
         renderer.setView(camera);
-        renderer.render();
+        
+        renderer.render(new int[]{0,1,2});
         renderer.getBatch().begin();
-        skillManager.drawSkills((SpriteBatch) renderer.getBatch());
-        assetSetter.drawObject((SpriteBatch) renderer.getBatch());
-        player.draw((SpriteBatch) renderer.getBatch(), camera);
-        bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
+                    for (AbstractMonster monster : monsters) {
+                        monster.render((SpriteBatch) renderer.getBatch());
+                    }
+                    renderer.getBatch().end();
+        for (int i = 3; i < gameMap.getTiledMap().getLayers().getCount(); i++) {
+                    renderer.render(new int[]{i});
+            }
+        
+                    renderer.getBatch().begin();
+                    player.draw((SpriteBatch) renderer.getBatch(), camera);
+                    assetSetter.drawObject((SpriteBatch) renderer.getBatch());
+                    skillManager.drawSkills((SpriteBatch) renderer.getBatch());
+                    bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
+                    renderer.getBatch().end();
+        
+        drawObjects();
+        checkCollisions();
+    }
 
-        // Draw monsters
-        for (AbstractMonster monster : monsters) {
-            monster.render((SpriteBatch) renderer.getBatch());
+    private void drawObjects() {
+        for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
+            for (MapObject object : layer.getObjects()) {
+                // Example: Draw rectangles for debugging
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                    // Draw the rectangle using your preferred method
+                    // Example: shapeRenderer.rect(rect.x, rect.y, rect.width, rect.height);
+                }
+            }
         }
-
-        renderer.getBatch().end();
-
-        // Draw debug outline
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        player.drawDebug(shapeRenderer);
     }
 
     private void handleZoom() {
@@ -425,7 +429,8 @@ public class Play implements Screen {
     }
 
     public void checkCollisions() {
-        if (gameMap.getTiledMap().getLayers().get("warnings") == null) {
+        MapLayer warningsLayer = gameMap.getTiledMap().getLayers().get("warnings");
+        if (warningsLayer == null) {
             Gdx.app.error("Play", "Warnings layer not found!");
             return;
         }
@@ -436,18 +441,20 @@ public class Play implements Screen {
         }
 
         Vector2 playerPos = player.getBody().getPosition();
-        com.badlogic.gdx.math.Rectangle playerRect = new com.badlogic.gdx.math.Rectangle(
-            playerPos.x * PPM,  // Convert Box2D coordinates to pixels
-            playerPos.y * PPM,
-            player.getBody().getFixtureList().get(0).getShape().getRadius() * 2 * PPM,  // Use body size
-            player.getBody().getFixtureList().get(0).getShape().getRadius() * 2 * PPM
+        float playerX = playerPos.x * PPM;
+        float playerY = playerPos.y * PPM;
+        
+        Rectangle playerRect = new Rectangle(
+            playerX - player.getWidth() / 2,
+            playerY - player.getHeight() / 2,
+            player.getWidth(),
+            player.getHeight()
         );
 
-        for (MapObject object : gameMap.getTiledMap().getLayers().get("warnings").getObjects()) {
+        for (MapObject object : warningsLayer.getObjects()) {
             if (object instanceof RectangleMapObject) {
-                RectangleMapObject rectObject = (RectangleMapObject) object;
-                com.badlogic.gdx.math.Rectangle rect = rectObject.getRectangle();
-
+                Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                
                 if (playerRect.overlaps(rect)) {
                     Gdx.app.log("Play", "Collision detected with warning area");
                     player.stopMovement();
@@ -523,6 +530,27 @@ public class Play implements Screen {
             transparencyManager.onPlayerExit(contact.getFixtureB());
         } else if (userDataB instanceof Player) {
             transparencyManager.onPlayerExit(contact.getFixtureA());
+        }
+    }
+
+    private void updateMonsters(float delta) {
+        // Update monster spawner
+        monsterSpawnManager.update(delta);
+        
+        // Update all monsters
+        for (AbstractMonster monster : monsters) {
+            // Set the map for proper visibility checks
+            monster.setMap(gameMap.getTiledMap());
+            monster.update(delta, player);
+        }
+        
+        // Remove dead monsters
+        for (int i = monsters.size - 1; i >= 0; i--) {
+            if (!monsters.get(i).isAlive()) {
+                AbstractMonster monster = monsters.removeIndex(i);
+                monster.dispose();
+                world.destroyBody(monster.getBody());
+            }
         }
     }
 }

@@ -10,10 +10,10 @@ import com.badlogic.gdx.physics.box2d.World;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class FlyingEye extends AbstractMonster {
-    private static final float ATTACK_RANGE = 1.0f;
+    private static final float ATTACK_RANGE = 0.1f;
     private static final float DETECTION_RANGE = 10f;
     private static final float ATTACK_COOLDOWN = 1.0f;
-    private static final float FLYING_EYE_SPEED = 2.0f;
+    private static final float FLYING_EYE_SPEED = 1f;
     private float attackTimer = 0;
 
     public FlyingEye(World world, float x, float y) {
@@ -33,7 +33,7 @@ public class FlyingEye extends AbstractMonster {
         Texture hitSheet = new Texture("sprites/monster/Flying eye/Take Hit.png");
         Texture deathSheet = new Texture("sprites/monster/Flying eye/Death.png");
         
-        idleAnimation = createAnimation(idleSheet, 8, 0.2f);
+        idleAnimation = createAnimation(idleSheet, 8, 0.1f);
         runAnimation = idleAnimation; // Flying eye uses same animation for idle/run
         attack1Animation = createAnimation(attackSheet, 8, 1.0f);
         takeHitAnimation = createAnimation(hitSheet, 4, 0.2f);
@@ -81,9 +81,14 @@ public class FlyingEye extends AbstractMonster {
     protected void updateAnimation(float delta) {
         stateTime += delta;
         
-        if (currentState == MonsterState.ATTACKING && 
-            attack1Animation.isAnimationFinished(stateTime)) {
-            currentState = MonsterState.IDLE;
+        if (currentState == MonsterState.ATTACKING) {
+            // Don't change state until animation fully completes
+            if (stateTime >= attack1Animation.getAnimationDuration()) {
+                isFinishingAttack = false;
+                changeState(MonsterState.RUNNING);
+                stateTime = 0;
+                attackTimer = ATTACK_COOLDOWN;
+            }
         }
         
         if (currentState == MonsterState.TAKE_HIT && 

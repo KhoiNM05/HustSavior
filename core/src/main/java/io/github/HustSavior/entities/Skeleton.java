@@ -10,10 +10,10 @@ import com.badlogic.gdx.physics.box2d.World;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class Skeleton extends AbstractMonster {
-    private static final float ATTACK_RANGE = 1.2f;
+    private static final float ATTACK_RANGE = 0.1f;
     private static final float DETECTION_RANGE = 8f;
     private static final float ATTACK_COOLDOWN = 1.2f;
-    private static final float SKELETON_SPEED = 1.5f;
+    private static final float SKELETON_SPEED = 1f;
     private float attackTimer = 0;
 
     public Skeleton(World world, float x, float y) {
@@ -39,11 +39,11 @@ public class Skeleton extends AbstractMonster {
         Texture deathSheet = new Texture("sprites/monster/Skeleton/Death.png");
         
         // Create animations (adjust frame counts based on your sprite sheets)
-        idleAnimation = createAnimation(idleSheet, 4, 0.2f);
-        runAnimation = createAnimation(walkSheet, 4, 0.1f);
-        attack1Animation = createAnimation(attackSheet, 8, 0.1f);
-        takeHitAnimation = createAnimation(hitSheet, 4, 0.1f);
-        deathAnimation = createAnimation(deathSheet, 4, 0.2f);
+        idleAnimation = createAnimation(idleSheet, 4, 0.1f);
+        runAnimation = createAnimation(walkSheet, 4, 0.5f);
+        attack1Animation = createAnimation(attackSheet, 8, 0.7f);
+        takeHitAnimation = createAnimation(hitSheet, 4, 0.5f);
+        deathAnimation = createAnimation(deathSheet, 4, 0.5f);
     }
 
     private Animation<TextureRegion> createAnimation(Texture sheet, int frameCount, float frameDuration) {
@@ -102,19 +102,14 @@ public class Skeleton extends AbstractMonster {
     protected void updateAnimation(float delta) {
         stateTime += delta;
         
-        if (currentState == MonsterState.ATTACKING && 
-            attack1Animation.isAnimationFinished(stateTime)) {
-            currentState = MonsterState.IDLE;
-        }
-        
-        if (currentState == MonsterState.TAKE_HIT && 
-            takeHitAnimation.isAnimationFinished(stateTime)) {
-            currentState = MonsterState.IDLE;
-        }
-        
-        if (currentState == MonsterState.DEATH && 
-            deathAnimation.isAnimationFinished(stateTime)) {
-            // Handle death completion if needed
+        if (currentState == MonsterState.ATTACKING) {
+            // Don't change state until animation fully completes
+            if (stateTime >= attack1Animation.getAnimationDuration()) {
+                isFinishingAttack = false;
+                changeState(MonsterState.RUNNING);
+                stateTime = 0;
+                attackTimer = ATTACK_COOLDOWN;
+            }
         }
     }
 
