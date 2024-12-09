@@ -2486,24 +2486,27 @@
   <object id="93" x="2406.33" y="1760" width="947" height="136"/>
   <object id="135" x="322.5" y="2963.5" width="227.5" height="105"/>
  </objectgroup>
- <objectgroup id="13" name="D35_bounds">
+ <objectgroup id="13" name="D35_bounds" visible="0">
   <object id="60" x="615" y="2274" width="173" height="540"/>
  </objectgroup>
- <objectgroup id="15" name="D5_bounds">
+ <objectgroup id="15" name="D5_bounds" visible="0">
   <object id="62" x="750" y="2183" width="978" height="251.667"/>
  </objectgroup>
  <objectgroup id="14" name="D3_bounds">
+  <properties>
+   <property name="categoryBits" type="int" value="4"/>
+  </properties>
   <object id="61" x="591.333" y="2633" width="1114.67" height="180"/>
  </objectgroup>
- <objectgroup id="19" name="Roof_bounds">
+ <objectgroup id="19" name="Roof_bounds" visible="0">
   <object id="79" x="269" y="2330.33" width="182" height="637"/>
   <object id="88" x="273.75" y="2127" width="248" height="184"/>
   <object id="89" x="271.25" y="2245" width="250.5" height="141"/>
  </objectgroup>
- <objectgroup id="18" name="Parking_bounds">
+ <objectgroup id="18" name="Parking_bounds" visible="0">
   <object id="77" x="321" y="2965" width="231" height="104.667"/>
  </objectgroup>
- <objectgroup id="22" name="warnings">
+ <objectgroup id="22" name="warnings" visible="0">
   <object id="125" x="2393.33" y="2961.33" width="186" height="72"/>
   <object id="126" x="2470" y="3032" width="833.333" height="60"/>
   <object id="127" x="3266.67" y="2952" width="108" height="84.6667"/>
