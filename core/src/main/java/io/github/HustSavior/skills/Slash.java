@@ -8,7 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.physics.box2d.*;
 import io.github.HustSavior.entities.Player;
 
-public class Calculus extends Sprite {
+public class Slash extends Sprite implements Skills{
 
     TextureRegion[] animation;
     Animation<TextureRegion> cast;
@@ -25,7 +25,7 @@ public class Calculus extends Sprite {
     private boolean castDirectionLeft;
     Player player;
 
-    public Calculus(Sprite sprite, Player player, World world){
+    public Slash(Sprite sprite, Player player, World world){
         super(sprite);
         this.cd=new CooldownController(DEFAULT_COOLDOWN);
         this.player=player;
@@ -34,22 +34,24 @@ public class Calculus extends Sprite {
         cast=createAnimation();
         getAnimationTime=cast.getAnimationDuration();
     }
+    @Override
     public Animation<TextureRegion> createAnimation(){
-        animation= new TextureRegion[7];
-        animation[0]= new TextureRegion(new Texture("skills/parabol1.png"));
-        animation[1]= new TextureRegion(new Texture("skills/parabol2.png"));
-        animation[2]= new TextureRegion(new Texture("skills/parabol3.png"));
-        animation[3]= new TextureRegion(new Texture("skills/parabol4.png"));
-        animation[4]= new TextureRegion(new Texture("skills/parabol5.png"));
-        animation[5]= new TextureRegion(new Texture("skills/parabol6.png"));
-        animation[6]= new TextureRegion(new Texture("skills/parabol7.png"));
+        animation= new TextureRegion[3];
+        animation[0]= new TextureRegion(new Texture("skills/Slash1.png"));
+        animation[1]= new TextureRegion(new Texture("skills/Slash2.png"));
+        animation[2]= new TextureRegion(new Texture("skills/Slash3.png"));
+        //animation[3]= new TextureRegion(new Texture("skills/parabol4.png"));
+        //animation[4]= new TextureRegion(new Texture("skills/parabol5.png"));
+        //animation[5]= new TextureRegion(new Texture("skills/parabol6.png"));
+        //animation[6]= new TextureRegion(new Texture("skills/parabol7.png"));
 
         return new Animation<TextureRegion>(1/60f, animation);
     }
+    @Override
     public void draw(SpriteBatch batch){
         super.draw(batch);
     }
-
+    @Override
     public void update(float delta) {
         // Start animation if cooldown is ready
         if (isReady()) {
@@ -57,7 +59,7 @@ public class Calculus extends Sprite {
             if (stateTime == 0) {
                 castDirectionLeft = player.isFacingLeft(); // Store the facing direction
                 if (!castDirectionLeft) castingX = player.getX() + player.getRegionWidth() / 2;
-                else castingX= player.getX() - player.getRegionWidth()/2;
+                else castingX= player.getX() - 3 * player.getRegionWidth()/2;
                 castingY = player.getY();
                 hitbox = createHitbox((int) castingX, (int) castingY, player.getPPM(), world);
             }
@@ -94,7 +96,7 @@ public class Calculus extends Sprite {
             cd.cooldownTimer(delta); // Update cooldown
         }
     }
-
+    @Override
     public Body createHitbox(int x, int y, float PPM, World world){
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;

@@ -8,6 +8,7 @@ public class CalcBook extends Item{
         super(sprite, x, y, PPM, world);
         this.imagePath = "item/calculus1.jpg";
         this.dialogMessage = "a Calculus Book!\nNow you can solve integrals";
+        this.id=1;
     }
 
 

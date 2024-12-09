@@ -10,19 +10,24 @@ import java.util.ArrayList;
 
 public class SkillManager {
     private final static int MELEE=1;
-    private final static int RANGED=2;
+    //private final static int RANGED=2;
+    private final static int SHIELD=2;
     Player player;
     private World world;
-    ArrayList<Calculus> skillList;
+    ArrayList<Skills> skillList;
     public SkillManager(Player player, World world){
         this.player=player;
         this.world=world;
-        skillList= new ArrayList<Calculus>();
+        skillList= new ArrayList<Skills>();
     }
 
     public void activateSkills(int id){
         if (id==MELEE){
-            skillList.add(new Calculus(new Sprite(new Texture("skills/parabol7.png")),player, world));
+            skillList.add(new Slash(new Sprite(new Texture("skills/SlashSprite.png")),player, world));
+        }
+        else if(id==SHIELD){
+            skillList.add(new Shield(new Sprite(new Texture("item/shield.png")), player, world));
+            System.out.println("activate");
         }
     }
 
@@ -39,5 +44,9 @@ public class SkillManager {
                 skillList.get(i).draw(batch);
             }
         }
+    }
+
+    public void applyBuff(int id){
+
     }
 }
