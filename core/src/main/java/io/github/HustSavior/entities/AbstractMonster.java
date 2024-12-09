@@ -41,12 +41,15 @@ public abstract class AbstractMonster {
     protected float stateTime = 0f;
     
     protected boolean isCollidingWithPlayer = false;
-    protected float attackCooldown = 0;
+    protected float attackTimer = 0;
     protected static final float ATTACK_COOLDOWN_TIME = 1.0f; // 1 second between attacks
+    
+    protected static final float DETECTION_RANGE = 8f;  // Default detection range
+    protected static final float ATTACK_RANGE = 0.8f;   // Reduced from 1.2f to 0.8f for closer attacks
+    protected static final float ATTACK_COOLDOWN = 1.0f; // Default cooldown
     
     // Abstract methods that must be implemented by specific monsters
     protected abstract void initializeAnimations();
-    protected abstract void updateAnimation(float delta);
     
     // Common methods
     public void draw(SpriteBatch batch) {
@@ -106,9 +109,9 @@ public abstract class AbstractMonster {
     public void takeDamage(float damage) {
         hp -= damage;
         if (hp <= 0) {
-            currentState = MonsterState.DEATH;
+            setState(MonsterState.DEATH);
         } else {
-            currentState = MonsterState.TAKE_HIT;
+            setState(MonsterState.TAKE_HIT);
         }
     }
     
@@ -135,21 +138,35 @@ public abstract class AbstractMonster {
     }
     
     public void update(float delta, Player player) {
-        stateTime += delta;
-        updateAnimation(delta);
-        
-        // Update attack cooldown
-        if (attackCooldown > 0) {
-            attackCooldown -= delta;
+        if (!isAlive()) {
+            setState(MonsterState.DEATH);
+            return;
         }
 
-        // If colliding with player and cooldown is ready, attack
-        if (isCollidingWithPlayer && attackCooldown <= 0) {
-            currentState = MonsterState.ATTACKING;
-            attackCooldown = ATTACK_COOLDOWN_TIME;
-        } else if (!isCollidingWithPlayer) {
-            // Normal movement/chase logic when not colliding
-            moveTowardsPlayer(player);
+        updateAnimation(delta);
+        attackTimer -= delta;
+
+        Vector2 playerPos = player.getBody().getPosition();
+        Vector2 monsterPos = body.getPosition();
+        Vector2 direction = new Vector2(playerPos).sub(monsterPos);
+        float distance = direction.len();
+
+        isFlipped = direction.x < 0;
+
+        if (distance <= DETECTION_RANGE) {
+            direction.nor();
+            setState(MonsterState.RUNNING);
+            body.setLinearVelocity(direction.x * speed, direction.y * speed);
+            
+            // Attack when in range but keep moving
+            if (distance <= ATTACK_RANGE && attackTimer <= 0) {
+                setState(MonsterState.ATTACKING);
+                player.takeDamage(attack);
+                attackTimer = ATTACK_COOLDOWN;
+            }
+        } else {
+            setState(MonsterState.IDLE);
+            body.setLinearVelocity(0, 0);
         }
     }
     
@@ -164,26 +181,28 @@ public abstract class AbstractMonster {
         }
     }
     
-    private void moveTowardsPlayer(Player player) {
-        if (!isAlive() || currentState == MonsterState.ATTACKING) return;
-        
-        Vector2 playerPos = player.getBody().getPosition();
-        Vector2 monsterPos = body.getPosition();
-        Vector2 direction = playerPos.cpy().sub(monsterPos).nor();
-        
-        // Only move if not too close to player
-        float distance = monsterPos.dst(playerPos);
-        if (distance > 1.5f) {  // Adjust this value as needed
-            body.setLinearVelocity(direction.x * speed, direction.y * speed);
-            currentState = MonsterState.RUNNING;
-            isFlipped = direction.x < 0;
-        } else {
-            body.setLinearVelocity(0, 0);
-            currentState = MonsterState.IDLE;
+    public MonsterState getCurrentState() {
+        return currentState;
+    }
+    
+    protected void setState(MonsterState newState) {
+        if (currentState != newState) {
+            currentState = newState;
+            stateTime = 0; // Reset animation time when state changes
         }
     }
     
-    public MonsterState getCurrentState() {
-        return currentState;
+    protected void updateAnimation(float delta) {
+        stateTime += delta;
+        
+        if (currentState == MonsterState.ATTACKING && 
+            attack1Animation.isAnimationFinished(stateTime)) {
+            setState(MonsterState.IDLE);
+        }
+        
+        if (currentState == MonsterState.TAKE_HIT && 
+            takeHitAnimation.isAnimationFinished(stateTime)) {
+            setState(MonsterState.IDLE);
+        }
     }
 } 

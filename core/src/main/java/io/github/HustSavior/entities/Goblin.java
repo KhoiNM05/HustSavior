@@ -10,9 +10,9 @@ import com.badlogic.gdx.physics.box2d.World;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class Goblin extends AbstractMonster {
-    private static final float ATTACK_RANGE = 1.5f;
+    private static final float ATTACK_RANGE = 0.1f;
     private static final float DETECTION_RANGE = 12f;
-    private static final float ATTACK_COOLDOWN = 1.0f;
+    private static final float ATTACK_COOLDOWN = 2.0f;
     private static final float GOBLIN_SPEED = 2f;
     private float attackTimer = 0;
 

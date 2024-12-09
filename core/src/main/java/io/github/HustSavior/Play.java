@@ -357,7 +357,7 @@ public class Play implements Screen {
 
         // Draw debug outline
         shapeRenderer.setProjectionMatrix(camera.combined);
-        player.drawDebug(shapeRenderer);
+        player.drawDebug(shapeRenderer, camera);
     }
 
     private void handleZoom() {

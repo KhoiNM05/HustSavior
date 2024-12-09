@@ -10,7 +10,7 @@ import com.badlogic.gdx.physics.box2d.World;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class FlyingEye extends AbstractMonster {
-    private static final float ATTACK_RANGE = 1.0f;
+    private static final float ATTACK_RANGE = 0.1f;
     private static final float DETECTION_RANGE = 10f;
     private static final float ATTACK_COOLDOWN = 1.0f;
     private static final float FLYING_EYE_SPEED = 2.0f;

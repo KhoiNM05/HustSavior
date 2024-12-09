@@ -10,7 +10,7 @@ import com.badlogic.gdx.physics.box2d.World;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class Skeleton extends AbstractMonster {
-    private static final float ATTACK_RANGE = 1.2f;
+    private static final float ATTACK_RANGE = 0.8f;
     private static final float DETECTION_RANGE = 8f;
     private static final float ATTACK_COOLDOWN = 1.2f;
     private static final float SKELETON_SPEED = 1.5f;

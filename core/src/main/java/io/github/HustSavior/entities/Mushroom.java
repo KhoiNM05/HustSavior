@@ -10,9 +10,9 @@ import com.badlogic.gdx.physics.box2d.World;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class Mushroom extends AbstractMonster {
-    private static final float ATTACK_RANGE = 0.8f;
+    private static final float ATTACK_RANGE = 0.1f;
     private static final float DETECTION_RANGE = 6f;
-    private static final float ATTACK_COOLDOWN = 1.0f;
+    private static final float ATTACK_COOLDOWN = 2.0f;
     private static final float MUSHROOM_SPEED = 0.5f;
     private float attackTimer = 0;
 
