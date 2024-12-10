@@ -29,7 +29,7 @@ public class SoundManager {
     }
     
     public void setMusicVolume(float volume) {
-        this.musicVolume = Math.clamp(volume, 0f, 1f);
+        this.musicVolume = Math.clamp(volume, 0f, 3f);
         updateVolumes();
     }
     

@@ -6,6 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -24,6 +25,7 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -55,6 +57,7 @@ import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
 import io.github.HustSavior.utils.transparency.TreeTransparencyManager;
+import io.github.HustSavior.sound.MusicPlayer;
 
 public class Play implements Screen {
     private final float PPM = GameConfig.PPM;
@@ -100,6 +103,8 @@ public class Play implements Screen {
     private final Game game;
 
     private Rectangle mapBounds;
+    private final MusicPlayer musicPlayer;
+    private long lastVolumeCheck = 0;
 
     public Play(Game game) {
         this.game = game;
@@ -137,7 +142,7 @@ public class Play implements Screen {
 
         player = new Player(
             new Sprite(new Texture("sprites/WalkRight1.png")),
-            250,    // Multiply by PPM to convert to world coordinates
+            350,    // Multiply by PPM to convert to world coordinates
             250,    // Multiply by PPM to convert to world coordinates
             world,
             game
@@ -192,6 +197,16 @@ public class Play implements Screen {
         for (AbstractMonster monster : monsters) {
             transparencyManager.addMonster(monster);
             monster.setGroundManagers(highgroundManager, lowgroundManager);
+        }
+
+        // Initialize and play music with debug logging
+        musicPlayer = MusicPlayer.getInstance();
+        Gdx.app.log("Play", "Initializing gameplay music");
+        try {
+            musicPlayer.playGameplayMusic();
+            Gdx.app.log("Play", "Gameplay music initialized successfully");
+        } catch (Exception e) {
+            Gdx.app.error("Play", "Failed to initialize gameplay music", e);
         }
     }
 
@@ -280,8 +295,15 @@ public class Play implements Screen {
         spawnManager.updateItemVisibilities(playerPos);
 
         if (player.getHealth() <= 0) {
+            musicPlayer.playDeathMusic();  // Play death sound
             game.setScreen(new DeathScreen(game));
             return;
+        }
+
+        // Add periodic volume check (every few seconds)
+        if (TimeUtils.timeSinceMillis(lastVolumeCheck) > 5000) { // Check every 5 seconds
+            Gdx.app.log("Play", "Current music volume: " + musicPlayer.getCurrentVolume());
+            lastVolumeCheck = TimeUtils.millis();
         }
     }
 
@@ -385,6 +407,8 @@ public class Play implements Screen {
             monster.dispose();
         }
         monsters.clear();
+
+        musicPlayer.dispose();
     }
 
     @Override

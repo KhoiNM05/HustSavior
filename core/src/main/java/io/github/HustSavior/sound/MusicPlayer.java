@@ -9,6 +9,8 @@ public class MusicPlayer {
     private boolean isLooping = true;
     
     private static final String MAIN_MENU_MUSIC = "sound/main_menu_sound.mp3";
+    private static final String GAMEPLAY_MUSIC = "sound/gameplay_music.mp3";
+    private static final String DEATH_MUSIC = "sound/death_sound.mp3";
     
     private MusicPlayer() {}
     
@@ -20,22 +22,46 @@ public class MusicPlayer {
     }
     
     public void playMusic(String musicPath) {
-        if (currentMusic != null) {
-            currentMusic.stop();
-            currentMusic.dispose();
+        try {
+            if (currentMusic != null) {
+                currentMusic.stop();
+                currentMusic.dispose();
+            }
+            
+            Gdx.app.log("MusicPlayer", "Attempting to play music: " + musicPath);
+            
+            if (!Gdx.files.internal(musicPath).exists()) {
+                Gdx.app.error("MusicPlayer", "Music file not found: " + musicPath);
+                return;
+            }
+            
+            currentMusic = Gdx.audio.newMusic(Gdx.files.internal(musicPath));
+            if (currentMusic == null) {
+                Gdx.app.error("MusicPlayer", "Failed to create Music instance");
+                return;
+            }
+            
+            currentMusic.setVolume(5.0f);  // Maximum volume
+            currentMusic.setLooping(isLooping);
+            currentMusic.play();
+            
+            Gdx.app.log("MusicPlayer", "Music started playing successfully");
+            Gdx.app.log("MusicPlayer", "Current volume: " + currentMusic.getVolume());
+            Gdx.app.log("MusicPlayer", "Is playing: " + currentMusic.isPlaying());
+            
+        } catch (Exception e) {
+            Gdx.app.error("MusicPlayer", "Error playing music: " + e.getMessage());
+            e.printStackTrace();
         }
-        
-        currentMusic = Gdx.audio.newMusic(Gdx.files.internal(musicPath));
-        currentMusic.setLooping(isLooping);
-        updateVolume();
-        currentMusic.play();
     }
     
     public void updateVolume() {
         if (currentMusic != null) {
-            float finalVolume = SoundManager.getInstance().getMasterVolume() 
+            float baseVolume = 10f;  // Base volume for gameplay music
+            float finalVolume = baseVolume * SoundManager.getInstance().getMasterVolume() 
                               * SoundManager.getInstance().getMusicVolume();
             currentMusic.setVolume(finalVolume);
+            Gdx.app.log("MusicPlayer", "Volume set to: " + finalVolume);
         }
     }
     
@@ -73,5 +99,41 @@ public class MusicPlayer {
     
     public void playMainMenuMusic() {
         playMusic(MAIN_MENU_MUSIC);
+    }
+    
+    public void playGameplayMusic() {
+        Gdx.app.log("MusicPlayer", "Starting gameplay music");
+        try {
+            if (currentMusic != null) {
+                currentMusic.stop();
+                currentMusic.dispose();
+            }
+            
+            currentMusic = Gdx.audio.newMusic(Gdx.files.internal(GAMEPLAY_MUSIC));
+            if (currentMusic != null) {
+                currentMusic.setVolume(5.0f);
+                currentMusic.setLooping(true);
+                currentMusic.play();
+                Gdx.app.log("MusicPlayer", "Gameplay music started with volume: " + currentMusic.getVolume());
+            } else {
+                Gdx.app.error("MusicPlayer", "Failed to create music instance");
+            }
+        } catch (Exception e) {
+            Gdx.app.error("MusicPlayer", "Error playing gameplay music", e);
+            e.printStackTrace();
+        }
+    }
+    
+    public void playDeathMusic() {
+        setLooping(false);
+        playMusic(DEATH_MUSIC);
+    }
+    
+    public float getCurrentVolume() {
+        return currentMusic != null ? currentMusic.getVolume() : 0f;
+    }
+    
+    public boolean isCurrentlyPlaying() {
+        return currentMusic != null && currentMusic.isPlaying();
     }
 } 

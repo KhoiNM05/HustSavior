@@ -20,8 +20,8 @@ public class DeathScreen implements Screen {
     private Texture background;
     private Skin skin;
     private float fadeTimer = 0;
-    private final float FADE_IN_DURATION = 1.5f;  // 1 second fade in
-    private final float DISPLAY_DURATION = 1.5f;  // 1 second display
+    private final float FADE_IN_DURATION = 2f;  // 1 second fade in
+    private final float DISPLAY_DURATION = 2f;  // 1 second display
     private final float FADE_OUT_DURATION = 2f; // 1 second fade out
     private State currentState = State.FADE_IN;
     private final OrthographicCamera camera;
