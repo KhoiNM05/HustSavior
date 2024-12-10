@@ -39,7 +39,8 @@ public class Player extends Sprite {
 
     public final Animation<TextureRegion> walkLeft;
     public final Animation<TextureRegion> walkRight;
-    private final Body body;
+    private Body mainBody;  // For ground/wall collisions
+    private Body hitBody;   // For monster collisions
 
     private static boolean facingLeft;
 
@@ -65,14 +66,21 @@ public class Player extends Sprite {
     // SkillManager
     private SkillManager skillManager;
 
+    private static final float KNOCKBACK_FORCE = 3.0f;
+    private static final float KNOCKBACK_DURATION = 0.2f;
+    private float knockbackTimer = 0;
+    private boolean isKnockedBack = false;
+
+    private World world;
+
     public Player(Sprite sprite, float x, float y, World world) {
         super(sprite);
-        setPosition(x / GameConfig.PPM, y / GameConfig.PPM);
+        this.world = world;
+        setPosition(x, y);
+        createBodies(x, y);
         // Initialize animations
         walkRight = createAnimation("sprites/WalkRight");
         walkLeft = createAnimation("sprites/WalkLeft");
-        // Initialize physics body
-        body = createBody(world, x / GameConfig.PPM, y / GameConfig.PPM);
         // HP & XP
         this.health = 100;
         this.maxHealth = 100;
@@ -112,45 +120,55 @@ public class Player extends Sprite {
         return new Animation<>(ANIMATION_SPEED, frames);
     }
 
-    private Body createBody(World world, float x, float y) {
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(
-                x, y);
-        bodyDef.fixedRotation = true; // Prevent rotation
-        bodyDef.linearDamping = 0.5f; // Add some drag
-        Body playerBody = world.createBody(bodyDef);
-        playerBody.setUserData(this);
-        // Replace circle shape with a small rectangle for feet
-        PolygonShape shape = new PolygonShape();
-        float footWidth = COLLISION_RADIUS / GameConfig.PPM;
-        float footHeight = (COLLISION_RADIUS / 3) / GameConfig.PPM; // Make height smaller for feet
-        // Offset the shape to the bottom of the sprite
-        shape.setAsBox(
-                footWidth, // half-width
-                footHeight, // half-height
-                new Vector2(0, -getHeight() / (4 * PPM)), // offset to bottom
-                0 // rotation
-        );
-        FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = shape;
-        fixtureDef.density = DENSITY;
-        fixtureDef.friction = FRICTION;
-        fixtureDef.restitution = RESTITUTION;
-        // Set collision filtering
-        fixtureDef.filter.categoryBits = 0x0002;
-        fixtureDef.filter.maskBits = 0x0001;
-        playerBody.createFixture(fixtureDef);
-        shape.dispose();
-        return playerBody;
+    protected void createBodies(float x, float y) {
+        // Main body for ground physics (smaller, at feet)
+        BodyDef mainDef = new BodyDef();
+        mainDef.position.set(x / PPM, (y) / PPM );
+        mainDef.type = BodyDef.BodyType.DynamicBody;
+        mainBody = world.createBody(mainDef);
+        mainBody.setUserData(this);
+
+        PolygonShape mainShape = new PolygonShape();
+        mainShape.setAsBox(6 / PPM, 3 / PPM);  // Small box for feet
+        
+        FixtureDef mainFixture = new FixtureDef();
+        mainFixture.shape = mainShape;
+        mainFixture.filter.categoryBits = GameConfig.BIT_PLAYER;
+        mainFixture.filter.maskBits = GameConfig.BIT_GROUND;
+        mainBody.createFixture(mainFixture);
+        mainShape.dispose();
+
+        // Hit body for monster collisions (larger, covers whole player)
+        BodyDef hitDef = new BodyDef();
+        hitDef.position.set(x / PPM, (y + 12) / PPM);  // Offset upward from feet
+        hitDef.type = BodyDef.BodyType.DynamicBody;
+        hitBody = world.createBody(hitDef);
+        hitBody.setUserData(this);
+
+        PolygonShape hitShape = new PolygonShape();
+        hitShape.setAsBox(8 / PPM, 16 / PPM);  // Larger box for full body
+        
+        FixtureDef hitFixture = new FixtureDef();
+        hitFixture.shape = hitShape;
+        hitFixture.isSensor = true;  // No physical response
+        hitFixture.filter.categoryBits = GameConfig.BIT_PLAYER_SENSOR;
+        hitFixture.filter.maskBits = GameConfig.BIT_MONSTER;
+        hitBody.createFixture(hitFixture);
+        hitShape.dispose();
+    }
+
+    // Update both bodies' positions
+    public void updateBodies() {
+        Vector2 pos = mainBody.getPosition();
+        hitBody.setTransform(pos.x, pos.y + 12/PPM, 0);  // Keep hit body above feet
     }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
         super.draw(batch);
-        float x = body.getPosition().x * GameConfig.PPM - getWidth() / 2;
-        float y = body.getPosition().y * GameConfig.PPM - getHeight() / 2;
-        setPosition(x, y);
-        skillManager.drawSkills(batch);
+        float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
+        float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
+        setPosition(x, y + 12);  // Offset sprite up from feet position
+
         // Shield
 //        if (shieldActive) {
 //            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
@@ -202,47 +220,50 @@ public class Player extends Sprite {
     }
 
     public Body getBody() {
-        return body;
+        return mainBody;
     }
 
-    public void drawDebug(ShapeRenderer shapeRenderer) {
-        // Get the body's position and shape
-        Body body = getBody();
-        for (Fixture fixture : body.getFixtureList()) {
-            if (fixture.getShape() instanceof PolygonShape) {
-                PolygonShape shape = (PolygonShape) fixture.getShape();
-                shapeRenderer.setColor(0, 0, 0, 1); // Black color
-                shapeRenderer.begin(ShapeType.Line);
-                // Get vertices of the box
-                float[] vertices = new float[8];
-                for (int i = 0; i < 4; i++) {
-                    Vector2 vertex = new Vector2();
-                    shape.getVertex(i, vertex);
-                    vertex.rotateRad(body.getAngle());
-                    vertex.add(body.getPosition());
-                    vertices[i * 2] = vertex.x * PPM;
-                    vertices[i * 2 + 1] = vertex.y * PPM;
-                }
-                // Draw the box
-                shapeRenderer.polygon(vertices);
-                shapeRenderer.end();
-            }
-        }
+    public void drawDebug(ShapeRenderer shapeRenderer, OrthographicCamera camera) {
+        // Draw player collision boxes
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeType.Line);
+        
+        // Draw main body (feet) in blue
+        shapeRenderer.setColor(0, 0, 1, 1);
+        Vector2 mainPos = mainBody.getPosition();
+        shapeRenderer.rect(
+            mainPos.x * PPM - 6,  // 6 is half width from createBodies
+            mainPos.y * PPM - 3,  // 3 is half height from createBodies
+            12,                   // Full width
+            6                     // Full height
+        );
+        
+        // Draw hit body (full body) in red
+        shapeRenderer.setColor(1, 0, 0, 1);
+        Vector2 hitPos = hitBody.getPosition();
+        shapeRenderer.rect(
+            hitPos.x * PPM - 8,   // 8 is half width from createBodies
+            hitPos.y * PPM - 16,  // 16 is half height from createBodies
+            16,                   // Full width
+            32                    // Full height
+        );
+        
+        shapeRenderer.end();
     }
 
     // Add this method to limit maximum velocity
     public void update(float delta) {
         // Add a maximum velocity limit
-        Vector2 velocity = body.getLinearVelocity();
+        Vector2 velocity = mainBody.getLinearVelocity();
         float maxVelocity = 5f; // Adjust this value as needed
         if (velocity.len() > maxVelocity) {
             velocity.nor().scl(maxVelocity);
-            body.setLinearVelocity(velocity);
+            mainBody.setLinearVelocity(velocity);
         }
         // Update sprite position to match physics body
         setPosition(
-                body.getPosition().x * GameConfig.PPM - getWidth() / 2,
-                body.getPosition().y * GameConfig.PPM - getHeight() / 2);
+                mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2,
+                mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2);
         // Shield
 //        if (shieldActive) {
 //            shieldTimeRemaining -= delta;
@@ -260,8 +281,8 @@ public class Player extends Sprite {
 
     public void stop() {
         // Stop the player's movement
-        if (body != null) {
-            body.setLinearVelocity(0, 0);
+        if (mainBody != null) {
+            mainBody.setLinearVelocity(0, 0);
         }
     }
 
@@ -286,12 +307,12 @@ public class Player extends Sprite {
     }
 
     public void stopMovement() {
-        getBody().setLinearVelocity(0, 0);
+        mainBody.setLinearVelocity(0, 0);
     }
 
     public void resetMovement() {
         // Reset any movement-related states if needed
-        getBody().setLinearVelocity(0, 0);
+        mainBody.setLinearVelocity(0, 0);
     }
 //    private void loadShieldAnimation() {
 //        // Load all shield frames into array
@@ -311,5 +332,20 @@ public class Player extends Sprite {
         shieldStateTime = 0;
     }
 
+
+    public void takeDamage(float damage) {
+        if (!shieldActive) {  // Only take damage if shield is not active
+            health = Math.max(0, health - damage);
+        }
+    }
+
+    public void applyKnockback(Vector2 sourcePosition) {
+        if (!isKnockedBack) {
+            Vector2 knockbackDirection = mainBody.getPosition().cpy().sub(sourcePosition).nor();
+            mainBody.setLinearVelocity(knockbackDirection.scl(KNOCKBACK_FORCE));
+            isKnockedBack = true;
+            knockbackTimer = KNOCKBACK_DURATION;
+        }
+    }
 
 }
