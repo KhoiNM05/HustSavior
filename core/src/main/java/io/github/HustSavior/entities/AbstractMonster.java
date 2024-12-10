@@ -12,6 +12,8 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.RayCastCallback;
 import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.map.HighgroundManager;
+import io.github.HustSavior.map.LowgroundManager;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public abstract class AbstractMonster {
@@ -234,12 +236,37 @@ public abstract class AbstractMonster {
         initializeAnimations();
     }
     
+    // Add these fields
+    protected HighgroundManager highgroundManager;
+    protected LowgroundManager lowgroundManager;
+    protected static final float POSITION_UPDATE_INTERVAL = 1/60f; // 60 times per second
+    protected float positionUpdateTimer = 0;
+    
     public void update(float delta, Player player) {
-        System.out.println("Debug: Entering update method for monster");
-
         if (!isAlive()) {
-            changeState(MonsterState.DEATH);
+            currentState = MonsterState.DEATH;
             return;
+        }
+
+        // Update position based on ground height
+        positionUpdateTimer += delta;
+        if (positionUpdateTimer >= POSITION_UPDATE_INTERVAL) {
+            positionUpdateTimer = 0;
+            Vector2 currentPos = body.getPosition();
+            
+            // Check and update highground position
+            Vector2 highgroundPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
+            // Check and update lowground position
+            Vector2 lowgroundPos = lowgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
+            
+            // Apply position updates if needed
+            if (highgroundManager.isInHighground() || lowgroundManager.isInLowground()) {
+                body.setTransform(
+                    highgroundManager.isInHighground() ? highgroundPos.x / PPM : lowgroundPos.x / PPM,
+                    highgroundManager.isInHighground() ? highgroundPos.y / PPM : lowgroundPos.y / PPM,
+                    0
+                );
+            }
         }
 
         // Debug: Check visibility status
@@ -465,4 +492,13 @@ public abstract class AbstractMonster {
             currentState = MonsterState.IDLE;
         }
     }
+    
+    //Add setter for managers
+    public void setGroundManagers(HighgroundManager highgroundManager, LowgroundManager lowgroundManager) {
+        this.highgroundManager = highgroundManager;
+        this.lowgroundManager = lowgroundManager;
+    }
+    
+    // In constructor or after setting initial stats:
+   
 } 

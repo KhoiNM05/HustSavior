@@ -47,6 +47,7 @@ import io.github.HustSavior.items.Shield;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
+import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.spawn.SpawnManager;
 import io.github.HustSavior.spawner.MonsterSpawnManager;
@@ -98,8 +99,10 @@ public class Play implements Screen {
     private InventoryTray inventoryTray;
     private Array<AbstractMonster> monsters;
     private MonsterSpawnManager monsterSpawnManager;
+    private final Game game;
 
     public Play(Game game) {
+        this.game = game;
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
@@ -186,6 +189,7 @@ public class Play implements Screen {
 
         for (AbstractMonster monster : monsters) {
             transparencyManager.addMonster(monster);
+            monster.setGroundManagers(highgroundManager, lowgroundManager);
         }
     }
 
@@ -289,6 +293,11 @@ public class Play implements Screen {
             player.getBody().getPosition().y * PPM
         );
         spawnManager.updateItemVisibilities(playerPos);
+
+        if (player.getHealth() <= 0) {
+            game.setScreen(new DeathScreen(game));
+            return;
+        }
     }
 
     private void clearScreen() {
@@ -318,10 +327,15 @@ public class Play implements Screen {
     }
 
     private void updateCamera() {
+        // Get bounded camera position from player
+        Vector2 boundedPosition = player.getCameraBoundedPosition(camera);
+        
         camera.position.set(
-                player.getX() + player.getWidth() / 2,
-                player.getY() + player.getHeight() / 2,
-                0);
+            boundedPosition.x,
+            boundedPosition.y,
+            0
+        );
+        
         handleZoom();
         camera.update();
     }
@@ -354,11 +368,8 @@ public class Play implements Screen {
     private void drawObjects() {
         for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
             for (MapObject object : layer.getObjects()) {
-                // Example: Draw rectangles for debugging
                 if (object instanceof RectangleMapObject) {
                     Rectangle rect = ((RectangleMapObject) object).getRectangle();
-                    // Draw the rectangle using your preferred method
-                    // Example: shapeRenderer.rect(rect.x, rect.y, rect.width, rect.height);
                 }
             }
         }

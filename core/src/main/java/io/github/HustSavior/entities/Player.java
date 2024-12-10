@@ -72,6 +72,10 @@ public class Player extends Sprite {
 
     private float alpha = 1.0f;
 
+    private float mapWidth;
+    private float mapHeight;
+    private static final float CAMERA_PADDING = 100f; // Adjust this value as needed
+
     public Player(Sprite sprite, float x, float y, World world) {
         super(sprite);
         this.world = world;
@@ -91,6 +95,10 @@ public class Player extends Sprite {
         shieldActive = false;
         shieldTimeRemaining = 0;
         loadShieldAnimation();
+
+        // Get map dimensions from your map (you'll need to pass these in)
+        this.mapWidth = GameConfig.MAP_WIDTH;
+        this.mapHeight = GameConfig.MAP_HEIGHT;
     }
 
     public float getHealth() {
@@ -351,5 +359,23 @@ public class Player extends Sprite {
 
     public void setAlpha(float alpha) {
         this.alpha = alpha;
+    }
+
+    // Add this method to handle camera boundaries
+    public Vector2 getCameraBoundedPosition(OrthographicCamera camera) {
+        float cameraHalfWidth = camera.viewportWidth * camera.zoom / 2;
+        float cameraHalfHeight = camera.viewportHeight * camera.zoom / 2;
+        
+        // Get current player position
+        float x = mainBody.getPosition().x * PPM;
+        float y = mainBody.getPosition().y * PPM;
+        
+        // Calculate bounded camera position
+        float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING), 
+                                mapWidth - cameraHalfWidth + CAMERA_PADDING);
+        float boundedY = Math.min(Math.max(y, cameraHalfHeight - CAMERA_PADDING), 
+                                mapHeight - cameraHalfHeight + CAMERA_PADDING);
+        
+        return new Vector2(boundedX, boundedY);
     }
 }
