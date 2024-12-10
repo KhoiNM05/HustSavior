@@ -14,7 +14,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
-import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
@@ -48,7 +47,6 @@ import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
 import io.github.HustSavior.screen.DeathScreen;
-import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.spawn.SpawnManager;
 import io.github.HustSavior.spawner.MonsterSpawnManager;
 import io.github.HustSavior.ui.GameTimer;
@@ -101,6 +99,8 @@ public class Play implements Screen {
     private MonsterSpawnManager monsterSpawnManager;
     private final Game game;
 
+    private Rectangle mapBounds;
+
     public Play(Game game) {
         this.game = game;
         // Set logging level to show debug messages
@@ -114,6 +114,7 @@ public class Play implements Screen {
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
         gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
+        initializeMapBounds();
 
         // Initialize SpawnManager before loading items
         spawnManager = new SpawnManager(gameMap.getTiledMap());
@@ -136,9 +137,10 @@ public class Play implements Screen {
 
         player = new Player(
             new Sprite(new Texture("sprites/WalkRight1.png")),
-            200,    // Multiply by PPM to convert to world coordinates
-            200,    // Multiply by PPM to convert to world coordinates
-            world
+            250,    // Multiply by PPM to convert to world coordinates
+            250,    // Multiply by PPM to convert to world coordinates
+            world,
+            game
         );
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
@@ -216,25 +218,8 @@ public class Play implements Screen {
         }
     }
 
-    private void createCollisionBodies() {
-        // Only create collision bodies for the general collisions layer
-        MapLayer collisionsLayer = gameMap.getTiledMap().getLayers().get("collisions");
-        if (collisionsLayer != null) {
-            createCollisionBodiesForLayer(collisionsLayer);
-        }
-    }
 
-    private void createCollisionBodiesForLayer(MapLayer layer) {
-        if (layer == null) return;
-
-        for (MapObject object : layer.getObjects()) {
-            if (object instanceof RectangleMapObject) {
-                collisionBodyFactory.createStaticBody((RectangleMapObject) object);
-            } else if (object instanceof PolygonMapObject) {
-                collisionBodyFactory.createStaticBody((PolygonMapObject) object);
-            }
-        }
-    }
+    
 
     private void loadItems() {
         assetSetter.createObject(500, 500, 1, PPM, world);
@@ -312,7 +297,6 @@ public class Play implements Screen {
         }
         updateCamera();
         bulletManager.update(delta);
-        skillManager.update(delta);
         updateMonsters(delta);
 
 
@@ -328,14 +312,14 @@ public class Play implements Screen {
     }
 
     private void updateCamera() {
-        // Get bounded camera position from player
-        Vector2 boundedPosition = player.getCameraBoundedPosition(camera);
-        
-        camera.position.set(
-            boundedPosition.x,
-            boundedPosition.y,
-            0
-        );
+        float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
+        float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
+
+        // Keep camera within map bounds
+        camera.position.x = Math.min(mapBounds.width - effectiveViewportWidth/2,
+                           Math.max(effectiveViewportWidth/2, player.getX()));
+        camera.position.y = Math.min(mapBounds.height - effectiveViewportHeight/2,
+                           Math.max(effectiveViewportHeight/2, player.getY()));
         
         handleZoom();
         camera.update();
@@ -358,7 +342,6 @@ public class Play implements Screen {
                     renderer.getBatch().begin();
                     player.draw((SpriteBatch) renderer.getBatch(), camera);
                     assetSetter.drawObject((SpriteBatch) renderer.getBatch());
-                    skillManager.drawSkills((SpriteBatch) renderer.getBatch());
                     bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
                     renderer.getBatch().end();
         
@@ -560,6 +543,18 @@ public class Play implements Screen {
                 AbstractMonster monster = monsters.removeIndex(i);
                 monster.dispose();
                 world.destroyBody(monster.getBody());
+            }
+        }
+    }
+
+    private void initializeMapBounds() {
+        MapLayer boundsLayer = gameMap.getTiledMap().getLayers().get("map_bounds");
+        if (boundsLayer != null) {
+            for (MapObject object : boundsLayer.getObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    mapBounds = ((RectangleMapObject) object).getRectangle();
+                    break;
+                }
             }
         }
     }

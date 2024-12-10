@@ -1,5 +1,6 @@
 package io.github.HustSavior.entities;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -13,11 +14,11 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.utils.GameConfig;
 
@@ -79,8 +80,20 @@ public class Player extends Sprite {
     private float mapHeight;
     private static final float CAMERA_PADDING = 100f; // Adjust this value as needed
 
-    public Player(Sprite sprite, float x, float y, World world) {
+    private Animation<TextureRegion> deathAnimation;
+    private boolean isDead = false;
+    private static final float DEATH_ANIMATION_DURATION = 1.0f;
+    private float deathTimer = 0;
+
+    private final Game game;
+
+    private static final float FADE_DURATION = 1.0f;
+    private float fadeTimer = 0;
+    private boolean startFading = false;
+
+    public Player(Sprite sprite, float x, float y, World world, Game game) {
         super(sprite);
+        this.game = game;
         this.world = world;
         setPosition(x, y);
         createBodies(x, y);
@@ -95,15 +108,16 @@ public class Player extends Sprite {
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
         // Shield
-
         shieldActive = false;
         shieldTimeRemaining = 0;
         loadShieldAnimation();
 
-        // Get map dimensions from your map (you'll need to pass these in)
+        // Initialize SkillManager
+        this.skillManager = new SkillManager(this, world);
+
+        // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
-
     }
 
     public float getHealth() {
@@ -173,6 +187,29 @@ public class Player extends Sprite {
     }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
+        if (isDead) {
+            deathTimer += Gdx.graphics.getDeltaTime();
+            TextureRegion currentFrame = deathAnimation.getKeyFrame(deathTimer, false);
+            
+            if (deathAnimation.isAnimationFinished(deathTimer) && !startFading) {
+                startFading = true;
+                fadeTimer = 0;
+            }
+            
+            if (startFading) {
+                fadeTimer += Gdx.graphics.getDeltaTime();
+                float alpha = Math.min(1, fadeTimer / FADE_DURATION);
+                batch.setColor(1, 1, 1, 1 - alpha); // Fade out player
+            }
+            
+            batch.draw(currentFrame, getX(), getY());
+            batch.setColor(1, 1, 1, 1); // Reset batch color
+            
+            if (startFading && fadeTimer >= FADE_DURATION) {
+                game.setScreen(new DeathScreen(game));
+            }
+            return;
+        }
         Color oldColor = batch.getColor();
         float finalAlpha = alpha;
         
@@ -311,14 +348,17 @@ public class Player extends Sprite {
 
 
 
-    public void acquireEffect(int id){
-        switch(id){
-            case 1: break;
-            case 4: heal(50); break;
-            case 5: skillManager.activateSkills(2); break;
-            default: ;
+    public void acquireEffect(int itemId) {
+        // Skip skill activation if skillManager is null
+        if (skillManager == null) {
+            // Handle shield effect directly
+            if (itemId == 5) { // Assuming 5 is the shield item ID
+                activateShield();
+                return;
+            }
+            return;
         }
-
+        skillManager.activateSkills(itemId);
     }
 
     public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}
@@ -337,17 +377,18 @@ public class Player extends Sprite {
         // Reset any movement-related states if needed
         mainBody.setLinearVelocity(0, 0);
     }
-//    private void loadShieldAnimation() {
-//        // Load all shield frames into array
-//        shieldFrames = new TextureRegion[4];
-//        for (int i = 0; i < 4; i++) {
-//            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
-//            shieldFrames[i] = new TextureRegion(texture);
-//            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
-//        }
-//        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
-//        shieldStateTime = 0;
-//    }
+
+    private void loadShieldAnimation() {
+        // Load all shield frames into array
+        shieldFrames = new TextureRegion[4];
+        for (int i = 0; i < 4; i++) {
+            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
+            shieldFrames[i] = new TextureRegion(texture);
+            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
+        }
+        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
+        shieldStateTime = 0;
+    }
 
     public void activateShield() {
         shieldActive = true;
@@ -357,8 +398,14 @@ public class Player extends Sprite {
 
 
     public void takeDamage(float damage) {
-        if (!shieldActive) {  // Only take damage if shield is not active
+        if (!shieldActive) {
             health = Math.max(0, health - damage);
+            if (health <= 0 && !isDead) {
+                isDead = true;
+                deathTimer = 0;
+                // Load death animation with 3 frames
+                deathAnimation = createDeathAnimation();
+            }
         }
     }
 
@@ -396,6 +443,19 @@ public class Player extends Sprite {
                                 mapHeight - cameraHalfHeight + CAMERA_PADDING);
         
         return new Vector2(boundedX, boundedY);
+    }
+
+    private Animation<TextureRegion> createDeathAnimation() {
+        TextureRegion[] frames = new TextureRegion[3];
+        frames[0] = new TextureRegion(new Texture("sprites/Defeated1.png"));
+        frames[1] = new TextureRegion(new Texture("sprites/Defeated2.png"));
+        frames[2] = new TextureRegion(new Texture("sprites/Defeated3.png"));
+        return new Animation<>(0.2f, frames); // 0.2s per frame
+    }
+
+    public void setMapBounds(float width, float height) {
+        this.mapWidth = width;
+        this.mapHeight = height;
     }
 
 }
