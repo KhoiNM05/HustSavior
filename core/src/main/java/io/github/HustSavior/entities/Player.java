@@ -73,6 +73,12 @@ public class Player extends Sprite {
 
     private World world;
 
+    private float alpha = 1.0f;
+
+    private float mapWidth;
+    private float mapHeight;
+    private static final float CAMERA_PADDING = 100f; // Adjust this value as needed
+
     public Player(Sprite sprite, float x, float y, World world) {
         super(sprite);
         this.world = world;
@@ -89,12 +95,15 @@ public class Player extends Sprite {
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
         // Shield
-//        shieldActive = false;
-//        shieldTimeRemaining = 0;
-        //loadShieldAnimation();
-        //skillManager
-        skillManager=new SkillManager(this, world);
-        skillManager.activateSkills(1);
+
+        shieldActive = false;
+        shieldTimeRemaining = 0;
+        loadShieldAnimation();
+
+        // Get map dimensions from your map (you'll need to pass these in)
+        this.mapWidth = GameConfig.MAP_WIDTH;
+        this.mapHeight = GameConfig.MAP_HEIGHT;
+
     }
 
     public float getHealth() {
@@ -164,33 +173,47 @@ public class Player extends Sprite {
     }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
+        Color oldColor = batch.getColor();
+        float finalAlpha = alpha;
+        
+        // If shield is active, use shield alpha instead
+        if (shieldActive) {
+            finalAlpha = SHIELD_ALPHA;
+        }
+        
+        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
         super.draw(batch);
+        
+        // Restore original color
+        batch.setColor(oldColor);
+        
         float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
         float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
 
-        // Shield
-//        if (shieldActive) {
-//            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
-//            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
-//            float shieldScale = 0.45f; // Adjust this value to change shield size
-//            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
-//            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
-//
-//            // Save current color
-//            Color oldColor = batch.getColor();
-//            // Set transparent color
-//            batch.setColor(1, 1, 1, SHIELD_ALPHA);
-//
-//            batch.draw(currentFrame,
-//                shieldX,
-//                shieldY,
-//                currentFrame.getRegionWidth() * shieldScale,
-//                currentFrame.getRegionHeight() * shieldScale);
-//
-//            // Restore original color
-//            batch.setColor(oldColor);
-//        }
+
+        if (shieldActive) {
+            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
+            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
+            float shieldScale = 0.45f; // Adjust this value to change shield size
+            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
+            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
+
+            // Save current color
+            oldColor = batch.getColor();
+            // Set transparent color
+            batch.setColor(1, 1, 1, SHIELD_ALPHA);
+
+            batch.draw(currentFrame,
+                shieldX,
+                shieldY,
+                currentFrame.getRegionWidth() * shieldScale,
+                currentFrame.getRegionHeight() * shieldScale);
+
+            // Restore original color
+            batch.setColor(oldColor);
+        }
+
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
         float healthBarX = getX() - HEALTH_BAR_OFFSET_X;
@@ -346,6 +369,33 @@ public class Player extends Sprite {
             isKnockedBack = true;
             knockbackTimer = KNOCKBACK_DURATION;
         }
+    }
+
+
+    public boolean isKnockedBack() {
+        return isKnockedBack;
+    }
+
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
+    }
+
+    // Add this method to handle camera boundaries
+    public Vector2 getCameraBoundedPosition(OrthographicCamera camera) {
+        float cameraHalfWidth = camera.viewportWidth * camera.zoom / 2;
+        float cameraHalfHeight = camera.viewportHeight * camera.zoom / 2;
+        
+        // Get current player position
+        float x = mainBody.getPosition().x * PPM;
+        float y = mainBody.getPosition().y * PPM;
+        
+        // Calculate bounded camera position
+        float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING), 
+                                mapWidth - cameraHalfWidth + CAMERA_PADDING);
+        float boundedY = Math.min(Math.max(y, cameraHalfHeight - CAMERA_PADDING), 
+                                mapHeight - cameraHalfHeight + CAMERA_PADDING);
+        
+        return new Vector2(boundedX, boundedY);
     }
 
 }

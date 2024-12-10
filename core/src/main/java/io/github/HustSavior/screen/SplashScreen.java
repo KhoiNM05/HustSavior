@@ -2,7 +2,6 @@ package io.github.HustSavior.screen;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-// import com.badlogic.gdx.ai.fsm.State;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -12,13 +11,12 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import io.github.HustSavior.HustSavior;
-import io.github.HustSavior.Play;
 import io.github.HustSavior.utils.GameConfig;
 
 public class SplashScreen implements Screen {
     private static final float FADE_DURATION = 1.0f;
     private static final float DISPLAY_DURATION = 2.0f;
-    private static final String SPLASH_PATH = "sprites/splash.png";
+    private static final String SPLASH_PATH = "sprites/Hust1.png";
 
 
     private final HustSavior game;

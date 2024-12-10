@@ -34,11 +34,11 @@ public class Mushroom extends AbstractMonster {
         Texture hitSheet = new Texture("sprites/monster/Mushroom/Take Hit.png");
         Texture deathSheet = new Texture("sprites/monster/Mushroom/Death.png");
         
-        idleAnimation = createAnimation(idleSheet, 4, 0.3f);
-        runAnimation = createAnimation(runSheet, 8, 0.2f);
+        idleAnimation = createAnimation(idleSheet, 4, 0.1f);
+        runAnimation = createAnimation(runSheet, 8, 0.5f);
         attack1Animation = createAnimation(attackSheet, 8, 1.0f);
-        takeHitAnimation = createAnimation(hitSheet, 4, 0.2f);
-        deathAnimation = createAnimation(deathSheet, 4, 0.3f);
+        takeHitAnimation = createAnimation(hitSheet, 4, 0.5f);
+        deathAnimation = createAnimation(deathSheet, 4, 0.5f);
     }
 
     @Override
@@ -83,9 +83,13 @@ public class Mushroom extends AbstractMonster {
     protected void updateAnimation(float delta) {
         stateTime += delta;
         
-        if (currentState == MonsterState.ATTACKING && 
-            attack1Animation.isAnimationFinished(stateTime)) {
-            currentState = MonsterState.IDLE;
+        if (currentState == MonsterState.ATTACKING) {
+            if (stateTime >= attack1Animation.getAnimationDuration()) {
+                isFinishingAttack = false;
+                changeState(MonsterState.RUNNING);
+                stateTime = 0;
+                attackTimer = ATTACK_COOLDOWN;
+            }
         }
         
         if (currentState == MonsterState.TAKE_HIT && 

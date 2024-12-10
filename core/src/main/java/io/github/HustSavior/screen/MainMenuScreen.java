@@ -1,18 +1,24 @@
 package io.github.HustSavior.screen;
+import java.util.ArrayList;
+
 import com.badlogic.gdx.Game;
-import io.github.HustSavior.ui.*;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
+
 import io.github.HustSavior.HustSavior;
 import io.github.HustSavior.sound.MusicPlayer;
-
-import java.util.ArrayList;
+import io.github.HustSavior.ui.PlayButton;
+import io.github.HustSavior.ui.SettingsButton;
+import io.github.HustSavior.utils.GameConfig;
 
 
 public class MainMenuScreen implements Screen {
@@ -20,10 +26,17 @@ public class MainMenuScreen implements Screen {
     private Texture background;
     private Stage stage;
     private ArrayList<Button> buttons ;
-    private String SPLASH_PATH = "sprites/Hust1.png";
+    private final String SPLASH_PATH = "screen/mainmenu.png";
     private boolean  useBlackScreen = false;
+    private final OrthographicCamera camera;
+    private final Viewport viewport;
+    
     public MainMenuScreen(Game game) {
         this.game = game;
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
+        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
+        camera.update();
     }
 
     @Override
@@ -83,29 +96,14 @@ public class MainMenuScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        float screenWidth = Gdx.graphics.getWidth();
-        float screenHeight = Gdx.graphics.getHeight();
-        float backgroundAspect = (float)background.getWidth() / background.getHeight();
-        float screenAspect = screenWidth / screenHeight;
-        
-        float renderWidth = screenWidth;
-        float renderHeight = screenHeight;
-        float x = 0, y = 0;
-        
-        if (screenAspect > backgroundAspect) {
-            // Screen is wider than background - fill width and overflow height
-            renderWidth = screenWidth;
-            renderHeight = screenWidth / backgroundAspect;
-            y = -(renderHeight - screenHeight) / 2;
-        } else {
-            // Screen is taller than background - fill height and overflow width
-            renderHeight = screenHeight;
-            renderWidth = screenHeight * backgroundAspect;
-            x = -(renderWidth - screenWidth) / 2;
-        }
+        camera.update();
+        ((HustSavior)game).batch.setProjectionMatrix(camera.combined);
 
         ((HustSavior)game).batch.begin();
-        ((HustSavior)game).batch.draw(background, x, y, renderWidth, renderHeight);
+        ((HustSavior)game).batch.draw(background, 
+            0, 0,                           // Position
+            GameConfig.GAME_WIDTH,          // Width
+            GameConfig.GAME_HEIGHT);        // Height
         ((HustSavior)game).batch.end();
 
         stage.act(Math.min(Gdx.graphics.getDeltaTime(), 1 / 30f));
@@ -114,13 +112,15 @@ public class MainMenuScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
+        viewport.update(width, height, true);
+        camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);
+        camera.update();
         stage.getViewport().update(width, height, true);
         // Update button positions
         for(Button button : buttons) {
             if(button instanceof PlayButton) {
                 ((PlayButton)button).updatePosition();
             }
-            // Add similar checks for other buttons that need repositioning
         }
     }
 
