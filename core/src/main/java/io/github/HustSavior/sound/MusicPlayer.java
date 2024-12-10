@@ -1,7 +1,7 @@
 package io.github.HustSavior.sound;
 
-import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 
 public class MusicPlayer {
     private static MusicPlayer instance;
@@ -109,12 +109,19 @@ public class MusicPlayer {
                 currentMusic.dispose();
             }
             
+            if (!Gdx.files.internal(GAMEPLAY_MUSIC).exists()) {
+                Gdx.app.error("MusicPlayer", "Gameplay music file not found at: " + GAMEPLAY_MUSIC);
+                return;
+            }
+            
             currentMusic = Gdx.audio.newMusic(Gdx.files.internal(GAMEPLAY_MUSIC));
             if (currentMusic != null) {
-                currentMusic.setVolume(5.0f);
+                currentMusic.setVolume(1.0f);  // Set to normal volume (1.0 instead of 5.0)
                 currentMusic.setLooping(true);
                 currentMusic.play();
-                Gdx.app.log("MusicPlayer", "Gameplay music started with volume: " + currentMusic.getVolume());
+                Gdx.app.log("MusicPlayer", "Gameplay music started successfully");
+                Gdx.app.log("MusicPlayer", "Current volume: " + currentMusic.getVolume());
+                Gdx.app.log("MusicPlayer", "Is playing: " + currentMusic.isPlaying());
             } else {
                 Gdx.app.error("MusicPlayer", "Failed to create music instance");
             }

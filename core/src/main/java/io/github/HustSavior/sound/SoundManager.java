@@ -1,12 +1,19 @@
 package io.github.HustSavior.sound;
 
+import com.badlogic.gdx.Gdx;
+
 public class SoundManager {
     private static SoundManager instance;
     private float masterVolume = 1.0f;
     private float musicVolume = 1.0f;
     private float sfxVolume = 1.0f;
     
-    private SoundManager() {}
+    private SoundManager() {
+        masterVolume = 1.0f;
+        musicVolume = 5.0f;
+        sfxVolume = 1.0f;
+        updateVolumes();
+    }
     
     public static SoundManager getInstance() {
         if (instance == null) {
@@ -20,7 +27,7 @@ public class SoundManager {
     }
     
     public void setMasterVolume(float volume) {
-        this.masterVolume = Math.clamp(volume, 0f, 1f);
+        this.masterVolume = Math.max(0f, Math.min(5f, volume));
         updateVolumes();
     }
     
@@ -29,7 +36,7 @@ public class SoundManager {
     }
     
     public void setMusicVolume(float volume) {
-        this.musicVolume = Math.clamp(volume, 0f, 3f);
+        this.musicVolume = Math.max(0f, Math.min(1f, volume));
         updateVolumes();
     }
     
@@ -45,5 +52,7 @@ public class SoundManager {
     private void updateVolumes() {
         MusicPlayer.getInstance().updateVolume();
         SfxPlayer.getInstance().updateVolume();
+        Gdx.app.log("SoundManager", "Master Volume: " + masterVolume);
+        Gdx.app.log("SoundManager", "Music Volume: " + musicVolume);
     }
 } 

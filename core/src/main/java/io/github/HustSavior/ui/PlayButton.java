@@ -5,7 +5,9 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+
 import io.github.HustSavior.Play;
+import io.github.HustSavior.sound.MusicPlayer;
 
 public class PlayButton extends Button {
     private String name = "play";
@@ -29,6 +31,8 @@ public class PlayButton extends Button {
         this.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                // Stop main menu music before transitioning
+                MusicPlayer.getInstance().stop();
                 game.setScreen(new Play(game));
             }
         });

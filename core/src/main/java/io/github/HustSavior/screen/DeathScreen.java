@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import io.github.HustSavior.HustSavior;
+import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.utils.GameConfig;
 
 public class DeathScreen implements Screen {
@@ -26,6 +27,7 @@ public class DeathScreen implements Screen {
     private State currentState = State.FADE_IN;
     private final OrthographicCamera camera;
     private final FitViewport viewport;
+    private MusicPlayer musicPlayer;
 
     private enum State {
         FADE_IN,
@@ -47,6 +49,7 @@ public class DeathScreen implements Screen {
         this.background = new Texture("screen/deadscreen.png");
         
         Gdx.input.setInputProcessor(stage);
+        musicPlayer = MusicPlayer.getInstance();
     }
 
     @Override
@@ -109,13 +112,24 @@ public class DeathScreen implements Screen {
     }
 
     @Override
+    public void show() {
+        Gdx.app.log("DeathScreen", "Initializing death music");
+        try {
+            musicPlayer.playDeathMusic();
+            musicPlayer.updateVolume();
+            Gdx.app.log("DeathScreen", "Death music volume: " + musicPlayer.getCurrentVolume());
+        } catch (Exception e) {
+            Gdx.app.error("DeathScreen", "Failed to initialize death music", e);
+        }
+    }
+
+    @Override
     public void dispose() {
         stage.dispose();
         skin.dispose();
         background.dispose();
     }
 
-    @Override public void show() {}
     @Override public void resize(int width, int height) {
         viewport.update(width, height, true);
         camera.position.set(GameConfig.GAME_WIDTH / 2, GameConfig.GAME_HEIGHT / 2, 0);

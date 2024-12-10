@@ -6,7 +6,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -49,6 +48,7 @@ import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
 import io.github.HustSavior.screen.DeathScreen;
+import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.spawn.SpawnManager;
 import io.github.HustSavior.spawner.MonsterSpawnManager;
 import io.github.HustSavior.ui.GameTimer;
@@ -57,7 +57,6 @@ import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
 import io.github.HustSavior.utils.transparency.TreeTransparencyManager;
-import io.github.HustSavior.sound.MusicPlayer;
 
 public class Play implements Screen {
     private final float PPM = GameConfig.PPM;
@@ -103,11 +102,12 @@ public class Play implements Screen {
     private final Game game;
 
     private Rectangle mapBounds;
-    private final MusicPlayer musicPlayer;
+    private MusicPlayer musicPlayer;
     private long lastVolumeCheck = 0;
 
     public Play(Game game) {
         this.game = game;
+        musicPlayer = MusicPlayer.getInstance();
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
@@ -198,16 +198,6 @@ public class Play implements Screen {
             transparencyManager.addMonster(monster);
             monster.setGroundManagers(highgroundManager, lowgroundManager);
         }
-
-        // Initialize and play music with debug logging
-        musicPlayer = MusicPlayer.getInstance();
-        Gdx.app.log("Play", "Initializing gameplay music");
-        try {
-            musicPlayer.playGameplayMusic();
-            Gdx.app.log("Play", "Gameplay music initialized successfully");
-        } catch (Exception e) {
-            Gdx.app.error("Play", "Failed to initialize gameplay music", e);
-        }
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -251,7 +241,16 @@ public class Play implements Screen {
 
     @Override
     public void show() {
-        // Gdx.input.setInputProcessor(inputHandler);
+        // Initialize music player
+        musicPlayer = MusicPlayer.getInstance();
+        Gdx.app.log("Play", "Initializing gameplay music");
+        try {
+            musicPlayer.playGameplayMusic();
+            musicPlayer.updateVolume();
+            Gdx.app.log("Play", "Initial music volume: " + musicPlayer.getCurrentVolume());
+        } catch (Exception e) {
+            Gdx.app.error("Play", "Failed to initialize gameplay music", e);
+        }
     }
 
     @Override
@@ -261,11 +260,10 @@ public class Play implements Screen {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
 
-            transparencyUpdateTimer += delta;
-            if (transparencyUpdateTimer >= TRANSPARENCY_UPDATE_INTERVAL) {
-                transparencyManager.update(player);
-                treeTransparencyManager.update(player);
-                transparencyUpdateTimer = 0;
+            // Add periodic volume check (every few seconds)
+            if (TimeUtils.timeSinceMillis(lastVolumeCheck) > 5000) { // Check every 5 seconds
+                Gdx.app.log("Play", "Current music volume: " + musicPlayer.getCurrentVolume());
+                lastVolumeCheck = TimeUtils.millis();
             }
         } else {
             player.stopMovement();
@@ -298,12 +296,6 @@ public class Play implements Screen {
             musicPlayer.playDeathMusic();  // Play death sound
             game.setScreen(new DeathScreen(game));
             return;
-        }
-
-        // Add periodic volume check (every few seconds)
-        if (TimeUtils.timeSinceMillis(lastVolumeCheck) > 5000) { // Check every 5 seconds
-            Gdx.app.log("Play", "Current music volume: " + musicPlayer.getCurrentVolume());
-            lastVolumeCheck = TimeUtils.millis();
         }
     }
 
@@ -393,6 +385,7 @@ public class Play implements Screen {
 
     @Override
     public void dispose() {
+       
         gameMap.dispose();
         player.getTexture().dispose();
         world.dispose();
@@ -437,10 +430,18 @@ public class Play implements Screen {
 
     @Override
     public void pause() {
+        if (musicPlayer != null) {
+            Gdx.app.log("MusicPlayer", "Pausing current music");
+            musicPlayer.pause();
+        }
     }
 
     @Override
     public void resume() {
+        if (musicPlayer != null) {
+            Gdx.app.log("MusicPlayer", "Resuming current music");
+            musicPlayer.resume();
+        }
     }
 
     public void setPaused(boolean paused) {
