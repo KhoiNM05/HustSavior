@@ -75,7 +75,7 @@ public class Play implements Screen {
     private BulletManager bulletManager;
     // Skill
     private final AssetSetter assetSetter;
-    private final SkillManager skillManager;
+    //private final SkillManager skillManager;
     private final InputHandler inputHandler;
     private final World world;
 
@@ -143,8 +143,8 @@ public class Play implements Screen {
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
         assetSetter = new AssetSetter();
-        skillManager = new SkillManager(player, world);
-        skillManager.activateSkills(1);
+        //skillManager = new SkillManager(player, world);
+        //skillManager.activateSkills(1);
 
         // Load items after SpawnManager is initialized
         loadItems();
@@ -314,6 +314,7 @@ public class Play implements Screen {
         bulletManager.update(delta);
         skillManager.update(delta);
         updateMonsters(delta);
+
 
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
@@ -499,12 +500,10 @@ public class Play implements Screen {
             dialogManager.showItemPickupDialog(item.getDialogMessage(), item.getImagePath(), () -> {
                 item.setCollected(true);
                 fixture.setSensor(true);
+                player.acquireEffect(item.getId());
                 assetSetter.objectAcquired(item);
-                if (item instanceof HPPotion) {
-                    player.heal(50);
-                } else if (item instanceof Shield) {
-                    player.activateShield();
-                }
+
+
                 inventoryTray.addItem(item.getImagePath());
                 inputHandler.setDialogActive(false);
             });

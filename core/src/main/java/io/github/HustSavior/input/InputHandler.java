@@ -32,9 +32,13 @@ public class InputHandler extends InputAdapter {
         switch (keycode) {
             case Input.Keys.A:
                 left = true;
+                //press A -> facingLeft=true;
+                player.setFacingDirection(true);
                 break;
             case Input.Keys.D:
                 right = true;
+                //press D -> facingLeft=false;
+                player.setFacingDirection(false);
                 break;
             case Input.Keys.W:
                 up = true;

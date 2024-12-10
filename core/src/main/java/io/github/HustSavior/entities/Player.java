@@ -18,6 +18,7 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.utils.GameConfig;
 
 public class Player extends Sprite {
@@ -62,6 +63,8 @@ public class Player extends Sprite {
     private float shieldStateTime;
     private TextureRegion[] shieldFrames;
     private static final float SHIELD_ALPHA = 0.5f; // Transparent shield
+    // SkillManager
+    private SkillManager skillManager;
 
     private static final float KNOCKBACK_FORCE = 3.0f;
     private static final float KNOCKBACK_DURATION = 0.2f;
@@ -92,6 +95,7 @@ public class Player extends Sprite {
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
         // Shield
+
         shieldActive = false;
         shieldTimeRemaining = 0;
         loadShieldAnimation();
@@ -99,6 +103,7 @@ public class Player extends Sprite {
         // Get map dimensions from your map (you'll need to pass these in)
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
+
     }
 
     public float getHealth() {
@@ -185,8 +190,8 @@ public class Player extends Sprite {
         float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
         float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
-        
-        // Shield
+
+
         if (shieldActive) {
             shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
             TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
@@ -208,6 +213,7 @@ public class Player extends Sprite {
             // Restore original color
             batch.setColor(oldColor);
         }
+
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
         float healthBarX = getX() - HEALTH_BAR_OFFSET_X;
@@ -282,13 +288,18 @@ public class Player extends Sprite {
                 mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2,
                 mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2);
         // Shield
-        if (shieldActive) {
-            shieldTimeRemaining -= delta;
-            if (shieldTimeRemaining <= 0) {
-                shieldActive = false;
-                shieldStateTime = 0;
-            }
-        }
+//        if (shieldActive) {
+//            shieldTimeRemaining -= delta;
+//            if (shieldTimeRemaining <= 0) {
+//                shieldActive = false;
+//                shieldStateTime = 0;
+//            }
+//        }
+
+    }
+
+    public void updateSkill(float delta){
+        skillManager.update(delta);
     }
 
     public void stop() {
@@ -299,9 +310,12 @@ public class Player extends Sprite {
     }
 
 
+
     public void acquireEffect(int id){
         switch(id){
             case 1: break;
+            case 4: heal(50); break;
+            case 5: skillManager.activateSkills(2); break;
             default: ;
         }
 
@@ -323,23 +337,24 @@ public class Player extends Sprite {
         // Reset any movement-related states if needed
         mainBody.setLinearVelocity(0, 0);
     }
-    private void loadShieldAnimation() {
-        // Load all shield frames into array
-        shieldFrames = new TextureRegion[4];
-        for (int i = 0; i < 4; i++) {
-            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
-            shieldFrames[i] = new TextureRegion(texture);
-            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
-        }
-        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
-        shieldStateTime = 0;
-    }
+//    private void loadShieldAnimation() {
+//        // Load all shield frames into array
+//        shieldFrames = new TextureRegion[4];
+//        for (int i = 0; i < 4; i++) {
+//            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
+//            shieldFrames[i] = new TextureRegion(texture);
+//            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
+//        }
+//        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
+//        shieldStateTime = 0;
+//    }
 
     public void activateShield() {
         shieldActive = true;
         shieldTimeRemaining = SHIELD_DURATION;
         shieldStateTime = 0;
     }
+
 
     public void takeDamage(float damage) {
         if (!shieldActive) {  // Only take damage if shield is not active
@@ -355,6 +370,7 @@ public class Player extends Sprite {
             knockbackTimer = KNOCKBACK_DURATION;
         }
     }
+
 
     public boolean isKnockedBack() {
         return isKnockedBack;
@@ -381,4 +397,5 @@ public class Player extends Sprite {
         
         return new Vector2(boundedX, boundedY);
     }
+
 }

@@ -16,6 +16,7 @@ public abstract class Item {
     protected String dialogMessage;
     private boolean visible = true;
     private float PPM;
+    int id;
 
     public Item(Sprite sprite, int x, int y, float PPM, World world){
         this.sprite = sprite;
@@ -91,4 +92,6 @@ public abstract class Item {
     public float getY() {
         return body.getPosition().y * PPM;
     }
+
+    public int getId(){return id;}
 }

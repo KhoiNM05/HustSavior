@@ -8,6 +8,7 @@ public class AlgebraBook extends Item{
         super(sprite, x, y, PPM, world);
         this.imagePath = "item/algebra.jpg";
         this.dialogMessage = "an Algebra Book!\nMatrix operations unlocked";
+        this.id=2;
     }
 
 

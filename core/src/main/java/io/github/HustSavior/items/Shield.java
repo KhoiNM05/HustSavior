@@ -9,6 +9,7 @@ public class Shield extends Item{
         sprite.setSize(sprite.getRegionWidth() * 0.03f, sprite.getRegionHeight() * 0.04f);
         this.imagePath = "item/shield.png";
         this.dialogMessage = "a shield!\nLet's enjoy the game!";
+        this.id=5;
     }
 }
 
