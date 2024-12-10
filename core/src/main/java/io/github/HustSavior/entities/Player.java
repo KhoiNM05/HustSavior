@@ -269,7 +269,9 @@ public class Player extends Sprite {
 
     public void acquireEffect(int id){
         switch(id){
-            case 1: break;
+            case 1:
+            case 2: skillManager.applyBuff(id);
+                    break;
             case 4: heal(50); break;
             case 5: skillManager.activateSkills(2); break;
             default: ;

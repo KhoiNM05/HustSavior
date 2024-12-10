@@ -119,4 +119,12 @@ public class Slash extends Sprite implements Skills{
     public boolean isReady(){
         return cd.isReady();
     }
+
+    public CooldownController getCooldown(){
+        return cd;
+    }
+
+    public void setAOE(float scale){
+        setSize(getRegionWidth()*scale, getRegionHeight()*scale);
+    }
 }
