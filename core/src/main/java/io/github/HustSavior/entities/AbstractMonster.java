@@ -106,6 +106,9 @@ public abstract class AbstractMonster {
         return isTransparent;
     }
     
+    protected static final float DETECTION_RANGE = 8f;  // Default detection range
+    protected static final float ATTACK_RANGE = 0.8f;   // Reduced from 1.2f to 0.8f for closer attacks
+    
     // Abstract methods that must be implemented by specific monsters
     protected abstract void initializeAnimations();
     protected abstract void disposeMonster();
@@ -169,9 +172,9 @@ public abstract class AbstractMonster {
     public void takeDamage(float damage) {
         hp -= damage;
         if (hp <= 0) {
-            currentState = MonsterState.DEATH;
+            changeState(MonsterState.DEATH);
         } else {
-            currentState = MonsterState.TAKE_HIT;
+            changeState(MonsterState.TAKE_HIT);
         }
     }
     

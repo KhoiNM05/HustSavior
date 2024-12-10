@@ -240,29 +240,32 @@ public class Player extends Sprite {
         return mainBody;
     }
 
-    public void drawDebug(ShapeRenderer shapeRenderer) {
-        // Get the body's position and shape
-        Body body = getBody();
-        for (Fixture fixture : body.getFixtureList()) {
-            if (fixture.getShape() instanceof PolygonShape) {
-                PolygonShape shape = (PolygonShape) fixture.getShape();
-                shapeRenderer.setColor(0, 0, 0, 1); // Black color
-                shapeRenderer.begin(ShapeType.Line);
-                // Get vertices of the box
-                float[] vertices = new float[8];
-                for (int i = 0; i < 4; i++) {
-                    Vector2 vertex = new Vector2();
-                    shape.getVertex(i, vertex);
-                    vertex.rotateRad(body.getAngle());
-                    vertex.add(body.getPosition());
-                    vertices[i * 2] = vertex.x * PPM;
-                    vertices[i * 2 + 1] = vertex.y * PPM;
-                }
-                // Draw the box
-                shapeRenderer.polygon(vertices);
-                shapeRenderer.end();
-            }
-        }
+    public void drawDebug(ShapeRenderer shapeRenderer, OrthographicCamera camera) {
+        // Draw player collision boxes
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeType.Line);
+        
+        // Draw main body (feet) in blue
+        shapeRenderer.setColor(0, 0, 1, 1);
+        Vector2 mainPos = mainBody.getPosition();
+        shapeRenderer.rect(
+            mainPos.x * PPM - 6,  // 6 is half width from createBodies
+            mainPos.y * PPM - 3,  // 3 is half height from createBodies
+            12,                   // Full width
+            6                     // Full height
+        );
+        
+        // Draw hit body (full body) in red
+        shapeRenderer.setColor(1, 0, 0, 1);
+        Vector2 hitPos = hitBody.getPosition();
+        shapeRenderer.rect(
+            hitPos.x * PPM - 8,   // 8 is half width from createBodies
+            hitPos.y * PPM - 16,  // 16 is half height from createBodies
+            16,                   // Full width
+            32                    // Full height
+        );
+        
+        shapeRenderer.end();
     }
 
     // Add this method to limit maximum velocity
