@@ -224,7 +224,7 @@ public class Play implements Screen {
     }
 
 
-    
+
 
     private void loadItems() {
         assetSetter.createObject(500, 500, 1, PPM, world);
@@ -311,6 +311,8 @@ public class Play implements Screen {
         }
         updateCamera();
         bulletManager.update(delta);
+        //update player skill;
+        player.updateSkill(delta);
         updateMonsters(delta);
 
 
@@ -334,7 +336,7 @@ public class Play implements Screen {
                            Math.max(effectiveViewportWidth/2, player.getX()));
         camera.position.y = Math.min(mapBounds.height - effectiveViewportHeight/2,
                            Math.max(effectiveViewportHeight/2, player.getY()));
-        
+
         handleZoom();
         camera.update();
     }
@@ -342,7 +344,7 @@ public class Play implements Screen {
     private void drawGame() {
         OrthogonalTiledMapRenderer renderer = gameMap.getRenderer();
         renderer.setView(camera);
-        
+
         renderer.render(new int[]{0,1,2});
         renderer.getBatch().begin();
                     for (AbstractMonster monster : monsters) {
@@ -352,13 +354,13 @@ public class Play implements Screen {
         for (int i = 3; i < gameMap.getTiledMap().getLayers().getCount(); i++) {
                     renderer.render(new int[]{i});
             }
-        
+
                     renderer.getBatch().begin();
                     player.draw((SpriteBatch) renderer.getBatch(), camera);
                     assetSetter.drawObject((SpriteBatch) renderer.getBatch());
                     bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
                     renderer.getBatch().end();
-        
+
         drawObjects();
         checkCollisions();
     }
@@ -385,7 +387,7 @@ public class Play implements Screen {
 
     @Override
     public void dispose() {
-       
+
         gameMap.dispose();
         player.getTexture().dispose();
         world.dispose();
@@ -463,7 +465,7 @@ public class Play implements Screen {
         Vector2 playerPos = player.getBody().getPosition();
         float playerX = playerPos.x * PPM;
         float playerY = playerPos.y * PPM;
-        
+
         Rectangle playerRect = new Rectangle(
             playerX - player.getWidth() / 2,
             playerY - player.getHeight() / 2,
@@ -474,7 +476,7 @@ public class Play implements Screen {
         for (MapObject object : warningsLayer.getObjects()) {
             if (object instanceof RectangleMapObject) {
                 Rectangle rect = ((RectangleMapObject) object).getRectangle();
-                
+
                 if (playerRect.overlaps(rect)) {
                     Gdx.app.log("Play", "Collision detected with warning area");
                     player.stopMovement();
@@ -554,14 +556,14 @@ public class Play implements Screen {
     private void updateMonsters(float delta) {
         // Update monster spawner
         monsterSpawnManager.update(delta);
-        
+
         // Update all monsters
         for (AbstractMonster monster : monsters) {
             // Set the map for proper visibility checks
             monster.setMap(gameMap.getTiledMap());
             monster.update(delta, player);
         }
-        
+
         // Remove dead monsters
         for (int i = monsters.size - 1; i >= 0; i--) {
             if (!monsters.get(i).isAlive()) {

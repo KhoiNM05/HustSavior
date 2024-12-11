@@ -45,7 +45,7 @@ public class Slash extends Sprite implements Skills{
         //animation[5]= new TextureRegion(new Texture("skills/parabol6.png"));
         //animation[6]= new TextureRegion(new Texture("skills/parabol7.png"));
 
-        return new Animation<TextureRegion>(1/60f, animation);
+        return new Animation<TextureRegion>(1/15f, animation);
     }
     @Override
     public void draw(SpriteBatch batch){

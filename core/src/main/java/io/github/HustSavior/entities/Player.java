@@ -110,7 +110,8 @@ public class Player extends Sprite {
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
         // Initialize SkillManager
         this.skillManager = new SkillManager(this, world);
-
+        //activate skill slash by default
+        skillManager.activateSkills(1);
         // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
