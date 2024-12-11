@@ -17,6 +17,7 @@ public class CollisionListener implements ContactListener {
     public void beginContact(Contact contact) {
         play.handleItemCollision(contact);
         play.handleBulletCollision(contact);
+        play.handleSkillCollision(contact);
     }
 
     @Override

@@ -2,6 +2,7 @@ package io.github.HustSavior.bullet;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
@@ -14,6 +15,9 @@ import io.github.HustSavior.utils.GameConfig;
 
 public class Bullet {
     private static final float PPM = GameConfig.PPM;
+    // Add sound effects
+    private Sound shootSound;
+    private Sound impactSound;
     private Vector2 position;
     private Vector2 velocity;
     private Texture texture;
@@ -24,6 +28,10 @@ public class Bullet {
     private int collisionCount = 0;
 
     public Bullet(World world, float x, float y, float vx, float vy, float width, float height) {
+        // Load sound effects
+        // shootSound = Gdx.audio.newSound(Gdx.files.internal("sound/bullet_effect.mp3"));
+        impactSound = Gdx.audio.newSound(Gdx.files.internal("sound/bullet_effect.mp3"));
+
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(vx, vy);
         if (Gdx.input.isKeyPressed(Input.Keys.O)) {
@@ -38,6 +46,9 @@ public class Bullet {
 
         // Create physics body for bullet
         createBody(world, x / PPM, y / PPM);
+
+        // Play shoot sound when bullet is created
+        // shootSound.play(0.1f);
     }
 
     private void createBody(World world, float x, float y) {
@@ -83,7 +94,7 @@ public class Bullet {
 
     public void render(SpriteBatch batch) {
         batch.draw(texture, position.x, position.y, width / 2, height / 2, width, height, 1, 1, rotation, 0, 0,
-                texture.getWidth(), texture.getHeight(), false, false);
+            texture.getWidth(), texture.getHeight(), false, false);
     }
 
     public Vector2 getPosition() {
@@ -92,9 +103,18 @@ public class Bullet {
 
     public void incrementCollisionCount() {
         collisionCount++;
+        // Play impact sound on collision
+        impactSound.play(0.05f);
     }
 
     public int getCollisionCount() {
         return collisionCount;
+    }
+
+    // Add dispose method or modify existing one
+    public void dispose() {
+        // if (shootSound != null) shootSound.dispose();
+        if (impactSound != null) impactSound.dispose();
+        if (texture != null) texture.dispose();
     }
 }
