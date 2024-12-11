@@ -14,16 +14,17 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
-import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -33,14 +34,23 @@ import io.github.HustSavior.bullet.BulletManager;
 import io.github.HustSavior.collision.CollisionBodyFactory;
 import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.dialog.DialogManager;
+import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.input.InputHandler;
-import io.github.HustSavior.items.*;
+import io.github.HustSavior.items.AlgebraBook;
+import io.github.HustSavior.items.AssetSetter;
+import io.github.HustSavior.items.CalcBook;
+import io.github.HustSavior.items.HPPotion;
+import io.github.HustSavior.items.Item;
+import io.github.HustSavior.items.PhysicBook;
+import io.github.HustSavior.items.Shield;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
-import io.github.HustSavior.skills.SkillManager;
+import io.github.HustSavior.screen.DeathScreen;
+import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.spawn.SpawnManager;
+import io.github.HustSavior.spawner.MonsterSpawnManager;
 import io.github.HustSavior.ui.GameTimer;
 import io.github.HustSavior.ui.InventoryTray;
 import io.github.HustSavior.ui.PauseButton;
@@ -87,8 +97,17 @@ public class Play implements Screen {
     private LowgroundManager lowgroundManager;
     private GameTimer gameTimer;
     private InventoryTray inventoryTray;
+    private Array<AbstractMonster> monsters;
+    private MonsterSpawnManager monsterSpawnManager;
+    private final Game game;
+
+    private Rectangle mapBounds;
+    private MusicPlayer musicPlayer;
+    private long lastVolumeCheck = 0;
 
     public Play(Game game) {
+        this.game = game;
+        musicPlayer = MusicPlayer.getInstance();
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
@@ -100,15 +119,16 @@ public class Play implements Screen {
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
         gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
+        initializeMapBounds();
 
         // Initialize SpawnManager before loading items
         spawnManager = new SpawnManager(gameMap.getTiledMap());
 
         // Initialize highground manager
         highgroundManager = new HighgroundManager(gameMap.getTiledMap());
-
         // Initialize transparency manager
         transparencyManager = new BuildingTransparencyManager(
+            world,
             gameMap.getTiledMap(),
             gameMap.getLayer("D3"),
             gameMap.getLayer("D5"),
@@ -117,12 +137,16 @@ public class Play implements Screen {
             gameMap.getLayer("Roof"),
             gameMap.getLayer("Parking")
         );
-
         // Add tree transparency manager initialization
-        treeTransparencyManager = new TreeTransparencyManager(gameMap.getTiledMap());
+        treeTransparencyManager = new TreeTransparencyManager(world, gameMap.getTiledMap());
 
-        player = new Player(new Sprite(new Texture("sprites/WalkRight1.png")),
-                500, 500, world);
+        player = new Player(
+            new Sprite(new Texture("sprites/WalkRight1.png")),
+            350,    // Multiply by PPM to convert to world coordinates
+            250,    // Multiply by PPM to convert to world coordinates
+            world,
+            game
+        );
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(world, player);
         assetSetter = new AssetSetter();
@@ -165,6 +189,15 @@ public class Play implements Screen {
 
         Skin inventorySkin = new Skin(Gdx.files.internal("UI/itemtray/itemtray.json"));
         inventoryTray = new InventoryTray(stage, inventorySkin);
+
+        // Initialize monster array and spawn manager
+        monsters = new Array<>();
+        monsterSpawnManager = new MonsterSpawnManager(world, player, monsters, camera, gameMap.getTiledMap());
+
+        for (AbstractMonster monster : monsters) {
+            transparencyManager.addMonster(monster);
+            monster.setGroundManagers(highgroundManager, lowgroundManager);
+        }
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -190,25 +223,8 @@ public class Play implements Screen {
         }
     }
 
-    private void createCollisionBodies() {
-        // Only create collision bodies for the general collisions layer
-        MapLayer collisionsLayer = gameMap.getTiledMap().getLayers().get("collisions");
-        if (collisionsLayer != null) {
-            createCollisionBodiesForLayer(collisionsLayer);
-        }
-    }
 
-    private void createCollisionBodiesForLayer(MapLayer layer) {
-        if (layer == null) return;
-
-        for (MapObject object : layer.getObjects()) {
-            if (object instanceof RectangleMapObject) {
-                collisionBodyFactory.createStaticBody((RectangleMapObject) object);
-            } else if (object instanceof PolygonMapObject) {
-                collisionBodyFactory.createStaticBody((PolygonMapObject) object);
-            }
-        }
-    }
+    
 
     private void loadItems() {
         assetSetter.createObject(500, 500, 1, PPM, world);
@@ -225,7 +241,16 @@ public class Play implements Screen {
 
     @Override
     public void show() {
-        // Gdx.input.setInputProcessor(inputHandler);
+        // Initialize music player
+        musicPlayer = MusicPlayer.getInstance();
+        Gdx.app.log("Play", "Initializing gameplay music");
+        try {
+            musicPlayer.playGameplayMusic();
+            musicPlayer.updateVolume();
+            Gdx.app.log("Play", "Initial music volume: " + musicPlayer.getCurrentVolume());
+        } catch (Exception e) {
+            Gdx.app.error("Play", "Failed to initialize gameplay music", e);
+        }
     }
 
     @Override
@@ -235,11 +260,10 @@ public class Play implements Screen {
             updateGame(delta);
             world.step(WORLD_STEP_TIME, 6, 2);
 
-            transparencyUpdateTimer += delta;
-            if (transparencyUpdateTimer >= TRANSPARENCY_UPDATE_INTERVAL) {
-                transparencyManager.update(player);
-                treeTransparencyManager.update(player);
-                transparencyUpdateTimer = 0;
+            // Add periodic volume check (every few seconds)
+            if (TimeUtils.timeSinceMillis(lastVolumeCheck) > 5000) { // Check every 5 seconds
+                Gdx.app.log("Play", "Current music volume: " + musicPlayer.getCurrentVolume());
+                lastVolumeCheck = TimeUtils.millis();
             }
         } else {
             player.stopMovement();
@@ -267,6 +291,12 @@ public class Play implements Screen {
             player.getBody().getPosition().y * PPM
         );
         spawnManager.updateItemVisibilities(playerPos);
+
+        if (player.getHealth() <= 0) {
+            musicPlayer.playDeathMusic();  // Play death sound
+            game.setScreen(new DeathScreen(game));
+            return;
+        }
     }
 
     private void clearScreen() {
@@ -281,7 +311,8 @@ public class Play implements Screen {
         }
         updateCamera();
         bulletManager.update(delta);
-        player.updateSkill(delta);
+        updateMonsters(delta);
+
 
         // Update player position based on highground
         Vector2 currentPos = player.getBody().getPosition();
@@ -295,10 +326,15 @@ public class Play implements Screen {
     }
 
     private void updateCamera() {
-        camera.position.set(
-                player.getX() + player.getWidth() / 2,
-                player.getY() + player.getHeight() / 2,
-                0);
+        float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
+        float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
+
+        // Keep camera within map bounds
+        camera.position.x = Math.min(mapBounds.width - effectiveViewportWidth/2,
+                           Math.max(effectiveViewportWidth/2, player.getX()));
+        camera.position.y = Math.min(mapBounds.height - effectiveViewportHeight/2,
+                           Math.max(effectiveViewportHeight/2, player.getY()));
+        
         handleZoom();
         camera.update();
     }
@@ -306,17 +342,35 @@ public class Play implements Screen {
     private void drawGame() {
         OrthogonalTiledMapRenderer renderer = gameMap.getRenderer();
         renderer.setView(camera);
-        renderer.render();
+        
+        renderer.render(new int[]{0,1,2});
         renderer.getBatch().begin();
-        //skillManager.drawSkills((SpriteBatch) renderer.getBatch());
-        assetSetter.drawObject((SpriteBatch) renderer.getBatch());
-        player.draw((SpriteBatch) renderer.getBatch(), camera);
-        bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
-        renderer.getBatch().end();
+                    for (AbstractMonster monster : monsters) {
+                        monster.render((SpriteBatch) renderer.getBatch());
+                    }
+                    renderer.getBatch().end();
+        for (int i = 3; i < gameMap.getTiledMap().getLayers().getCount(); i++) {
+                    renderer.render(new int[]{i});
+            }
+        
+                    renderer.getBatch().begin();
+                    player.draw((SpriteBatch) renderer.getBatch(), camera);
+                    assetSetter.drawObject((SpriteBatch) renderer.getBatch());
+                    bulletManager.render((SpriteBatch) renderer.getBatch(), camera);
+                    renderer.getBatch().end();
+        
+        drawObjects();
+        checkCollisions();
+    }
 
-        // Draw debug outline
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        player.drawDebug(shapeRenderer);
+    private void drawObjects() {
+        for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
+            for (MapObject object : layer.getObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                }
+            }
+        }
     }
 
     private void handleZoom() {
@@ -331,6 +385,7 @@ public class Play implements Screen {
 
     @Override
     public void dispose() {
+       
         gameMap.dispose();
         player.getTexture().dispose();
         world.dispose();
@@ -339,6 +394,14 @@ public class Play implements Screen {
         stage.dispose();
         gameTimer.dispose();
         inventoryTray.dispose();
+
+        // Dispose monsters
+        for (AbstractMonster monster : monsters) {
+            monster.dispose();
+        }
+        monsters.clear();
+
+        musicPlayer.dispose();
     }
 
     @Override
@@ -367,10 +430,18 @@ public class Play implements Screen {
 
     @Override
     public void pause() {
+        if (musicPlayer != null) {
+            Gdx.app.log("MusicPlayer", "Pausing current music");
+            musicPlayer.pause();
+        }
     }
 
     @Override
     public void resume() {
+        if (musicPlayer != null) {
+            Gdx.app.log("MusicPlayer", "Resuming current music");
+            musicPlayer.resume();
+        }
     }
 
     public void setPaused(boolean paused) {
@@ -378,7 +449,8 @@ public class Play implements Screen {
     }
 
     public void checkCollisions() {
-        if (gameMap.getTiledMap().getLayers().get("warnings") == null) {
+        MapLayer warningsLayer = gameMap.getTiledMap().getLayers().get("warnings");
+        if (warningsLayer == null) {
             Gdx.app.error("Play", "Warnings layer not found!");
             return;
         }
@@ -389,18 +461,20 @@ public class Play implements Screen {
         }
 
         Vector2 playerPos = player.getBody().getPosition();
-        com.badlogic.gdx.math.Rectangle playerRect = new com.badlogic.gdx.math.Rectangle(
-            playerPos.x * PPM,  // Convert Box2D coordinates to pixels
-            playerPos.y * PPM,
-            player.getBody().getFixtureList().get(0).getShape().getRadius() * 2 * PPM,  // Use body size
-            player.getBody().getFixtureList().get(0).getShape().getRadius() * 2 * PPM
+        float playerX = playerPos.x * PPM;
+        float playerY = playerPos.y * PPM;
+        
+        Rectangle playerRect = new Rectangle(
+            playerX - player.getWidth() / 2,
+            playerY - player.getHeight() / 2,
+            player.getWidth(),
+            player.getHeight()
         );
 
-        for (MapObject object : gameMap.getTiledMap().getLayers().get("warnings").getObjects()) {
+        for (MapObject object : warningsLayer.getObjects()) {
             if (object instanceof RectangleMapObject) {
-                RectangleMapObject rectObject = (RectangleMapObject) object;
-                com.badlogic.gdx.math.Rectangle rect = rectObject.getRectangle();
-
+                Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                
                 if (playerRect.overlaps(rect)) {
                     Gdx.app.log("Play", "Collision detected with warning area");
                     player.stopMovement();
@@ -476,7 +550,44 @@ public class Play implements Screen {
             transparencyManager.onPlayerExit(contact.getFixtureA());
         }
     }
+
+    private void updateMonsters(float delta) {
+        // Update monster spawner
+        monsterSpawnManager.update(delta);
+        
+        // Update all monsters
+        for (AbstractMonster monster : monsters) {
+            // Set the map for proper visibility checks
+            monster.setMap(gameMap.getTiledMap());
+            monster.update(delta, player);
+        }
+        
+        // Remove dead monsters
+        for (int i = monsters.size - 1; i >= 0; i--) {
+            if (!monsters.get(i).isAlive()) {
+                AbstractMonster monster = monsters.removeIndex(i);
+                monster.dispose();
+                world.destroyBody(monster.getBody());
+            }
+        }
+    }
+
+    private void initializeMapBounds() {
+        MapLayer boundsLayer = gameMap.getTiledMap().getLayers().get("map_bounds");
+        if (boundsLayer != null) {
+            for (MapObject object : boundsLayer.getObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    mapBounds = ((RectangleMapObject) object).getRectangle();
+                    break;
+                }
+            }
+        }
+    }
 }
+
+
+
+
 
 
 

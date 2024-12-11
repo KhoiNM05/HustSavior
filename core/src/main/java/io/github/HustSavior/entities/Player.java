@@ -1,5 +1,6 @@
 package io.github.HustSavior.entities;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -18,6 +19,7 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.utils.GameConfig;
 
@@ -39,7 +41,8 @@ public class Player extends Sprite {
 
     public final Animation<TextureRegion> walkLeft;
     public final Animation<TextureRegion> walkRight;
-    private final Body body;
+    private Body mainBody;  // For ground/wall collisions
+    private Body hitBody;   // For monster collisions
 
     private static boolean facingLeft;
 
@@ -65,14 +68,39 @@ public class Player extends Sprite {
     // SkillManager
     private SkillManager skillManager;
 
-    public Player(Sprite sprite, float x, float y, World world) {
+    private static final float KNOCKBACK_FORCE = 3.0f;
+    private static final float KNOCKBACK_DURATION = 0.2f;
+    private float knockbackTimer = 0;
+    private boolean isKnockedBack = false;
+
+    private World world;
+
+    private float alpha = 1.0f;
+
+    private float mapWidth;
+    private float mapHeight;
+    private static final float CAMERA_PADDING = 100f; // Adjust this value as needed
+
+    private Animation<TextureRegion> deathAnimation;
+    private boolean isDead = false;
+    private static final float DEATH_ANIMATION_DURATION = 1.0f;
+    private float deathTimer = 0;
+
+    private final Game game;
+
+    private static final float FADE_DURATION = 1.0f;
+    private float fadeTimer = 0;
+    private boolean startFading = false;
+
+    public Player(Sprite sprite, float x, float y, World world, Game game) {
         super(sprite);
-        setPosition(x / GameConfig.PPM, y / GameConfig.PPM);
+        this.game = game;
+        this.world = world;
+        setPosition(x, y);
+        createBodies(x, y);
         // Initialize animations
         walkRight = createAnimation("sprites/WalkRight");
         walkLeft = createAnimation("sprites/WalkLeft");
-        // Initialize physics body
-        body = createBody(world, x / GameConfig.PPM, y / GameConfig.PPM);
         // HP & XP
         this.health = 100;
         this.maxHealth = 100;
@@ -80,13 +108,12 @@ public class Player extends Sprite {
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
-        // Shield
-//        shieldActive = false;
-//        shieldTimeRemaining = 0;
-        //loadShieldAnimation();
-        //skillManager
-        skillManager=new SkillManager(this, world);
-        skillManager.activateSkills(1);
+        // Initialize SkillManager
+        this.skillManager = new SkillManager(this, world);
+
+        // Get map dimensions
+        this.mapWidth = GameConfig.MAP_WIDTH;
+        this.mapHeight = GameConfig.MAP_HEIGHT;
     }
 
     public float getHealth() {
@@ -112,67 +139,56 @@ public class Player extends Sprite {
         return new Animation<>(ANIMATION_SPEED, frames);
     }
 
-    private Body createBody(World world, float x, float y) {
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(
-                x, y);
-        bodyDef.fixedRotation = true; // Prevent rotation
-        bodyDef.linearDamping = 0.5f; // Add some drag
-        Body playerBody = world.createBody(bodyDef);
-        playerBody.setUserData(this);
-        // Replace circle shape with a small rectangle for feet
-        PolygonShape shape = new PolygonShape();
-        float footWidth = COLLISION_RADIUS / GameConfig.PPM;
-        float footHeight = (COLLISION_RADIUS / 3) / GameConfig.PPM; // Make height smaller for feet
-        // Offset the shape to the bottom of the sprite
-        shape.setAsBox(
-                footWidth, // half-width
-                footHeight, // half-height
-                new Vector2(0, -getHeight() / (4 * PPM)), // offset to bottom
-                0 // rotation
-        );
-        FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = shape;
-        fixtureDef.density = DENSITY;
-        fixtureDef.friction = FRICTION;
-        fixtureDef.restitution = RESTITUTION;
-        // Set collision filtering
-        fixtureDef.filter.categoryBits = 0x0002;
-        fixtureDef.filter.maskBits = 0x0001;
-        playerBody.createFixture(fixtureDef);
-        shape.dispose();
-        return playerBody;
+    protected void createBodies(float x, float y) {
+        // Main body for ground physics (smaller, at feet)
+        BodyDef mainDef = new BodyDef();
+        mainDef.position.set(x / PPM, (y) / PPM );
+        mainDef.type = BodyDef.BodyType.DynamicBody;
+        mainBody = world.createBody(mainDef);
+        mainBody.setUserData(this);
+
+        PolygonShape mainShape = new PolygonShape();
+        mainShape.setAsBox(6 / PPM, 3 / PPM);  // Small box for feet
+
+        FixtureDef mainFixture = new FixtureDef();
+        mainFixture.shape = mainShape;
+        mainFixture.filter.categoryBits = GameConfig.BIT_PLAYER;
+        mainFixture.filter.maskBits = GameConfig.BIT_GROUND;
+        mainBody.createFixture(mainFixture);
+        mainShape.dispose();
+
+        // Hit body for monster collisions (larger, covers whole player)
+        BodyDef hitDef = new BodyDef();
+        hitDef.position.set(x / PPM, (y + 12) / PPM);  // Offset upward from feet
+        hitDef.type = BodyDef.BodyType.DynamicBody;
+        hitBody = world.createBody(hitDef);
+        hitBody.setUserData(this);
+
+        PolygonShape hitShape = new PolygonShape();
+        hitShape.setAsBox(8 / PPM, 16 / PPM);  // Larger box for full body
+
+        FixtureDef hitFixture = new FixtureDef();
+        hitFixture.shape = hitShape;
+        hitFixture.isSensor = true;  // No physical response
+        hitFixture.filter.categoryBits = GameConfig.BIT_PLAYER_SENSOR;
+        hitFixture.filter.maskBits = GameConfig.BIT_MONSTER;
+        hitBody.createFixture(hitFixture);
+        hitShape.dispose();
+    }
+
+    // Update both bodies' positions
+    public void updateBodies() {
+        Vector2 pos = mainBody.getPosition();
+        hitBody.setTransform(pos.x, pos.y + 12/PPM, 0);  // Keep hit body above feet
     }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
         super.draw(batch);
-        float x = body.getPosition().x * GameConfig.PPM - getWidth() / 2;
-        float y = body.getPosition().y * GameConfig.PPM - getHeight() / 2;
-        setPosition(x, y);
+        float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
+        float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
+        setPosition(x, y + 12);
         skillManager.drawSkills(batch);
-        // Shield
-//        if (shieldActive) {
-//            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
-//            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
-//            float shieldScale = 0.45f; // Adjust this value to change shield size
-//            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
-//            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
-//
-//            // Save current color
-//            Color oldColor = batch.getColor();
-//            // Set transparent color
-//            batch.setColor(1, 1, 1, SHIELD_ALPHA);
-//
-//            batch.draw(currentFrame,
-//                shieldX,
-//                shieldY,
-//                currentFrame.getRegionWidth() * shieldScale,
-//                currentFrame.getRegionHeight() * shieldScale);
-//
-//            // Restore original color
-//            batch.setColor(oldColor);
-//        }
+
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
         float healthBarX = getX() - HEALTH_BAR_OFFSET_X;
@@ -202,47 +218,50 @@ public class Player extends Sprite {
     }
 
     public Body getBody() {
-        return body;
+        return mainBody;
     }
 
-    public void drawDebug(ShapeRenderer shapeRenderer) {
-        // Get the body's position and shape
-        Body body = getBody();
-        for (Fixture fixture : body.getFixtureList()) {
-            if (fixture.getShape() instanceof PolygonShape) {
-                PolygonShape shape = (PolygonShape) fixture.getShape();
-                shapeRenderer.setColor(0, 0, 0, 1); // Black color
-                shapeRenderer.begin(ShapeType.Line);
-                // Get vertices of the box
-                float[] vertices = new float[8];
-                for (int i = 0; i < 4; i++) {
-                    Vector2 vertex = new Vector2();
-                    shape.getVertex(i, vertex);
-                    vertex.rotateRad(body.getAngle());
-                    vertex.add(body.getPosition());
-                    vertices[i * 2] = vertex.x * PPM;
-                    vertices[i * 2 + 1] = vertex.y * PPM;
-                }
-                // Draw the box
-                shapeRenderer.polygon(vertices);
-                shapeRenderer.end();
-            }
-        }
+    public void drawDebug(ShapeRenderer shapeRenderer, OrthographicCamera camera) {
+        // Draw player collision boxes
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeType.Line);
+
+        // Draw main body (feet) in blue
+        shapeRenderer.setColor(0, 0, 1, 1);
+        Vector2 mainPos = mainBody.getPosition();
+        shapeRenderer.rect(
+            mainPos.x * PPM - 6,  // 6 is half width from createBodies
+            mainPos.y * PPM - 3,  // 3 is half height from createBodies
+            12,                   // Full width
+            6                     // Full height
+        );
+
+        // Draw hit body (full body) in red
+        shapeRenderer.setColor(1, 0, 0, 1);
+        Vector2 hitPos = hitBody.getPosition();
+        shapeRenderer.rect(
+            hitPos.x * PPM - 8,   // 8 is half width from createBodies
+            hitPos.y * PPM - 16,  // 16 is half height from createBodies
+            16,                   // Full width
+            32                    // Full height
+        );
+
+        shapeRenderer.end();
     }
 
     // Add this method to limit maximum velocity
     public void update(float delta) {
         // Add a maximum velocity limit
-        Vector2 velocity = body.getLinearVelocity();
+        Vector2 velocity = mainBody.getLinearVelocity();
         float maxVelocity = 5f; // Adjust this value as needed
         if (velocity.len() > maxVelocity) {
             velocity.nor().scl(maxVelocity);
-            body.setLinearVelocity(velocity);
+            mainBody.setLinearVelocity(velocity);
         }
         // Update sprite position to match physics body
         setPosition(
-                body.getPosition().x * GameConfig.PPM - getWidth() / 2,
-                body.getPosition().y * GameConfig.PPM - getHeight() / 2);
+                mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2,
+                mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2);
         // Shield
 //        if (shieldActive) {
 //            shieldTimeRemaining -= delta;
@@ -260,8 +279,8 @@ public class Player extends Sprite {
 
     public void stop() {
         // Stop the player's movement
-        if (body != null) {
-            body.setLinearVelocity(0, 0);
+        if (mainBody != null) {
+            mainBody.setLinearVelocity(0, 0);
         }
     }
 
@@ -288,30 +307,73 @@ public class Player extends Sprite {
     }
 
     public void stopMovement() {
-        getBody().setLinearVelocity(0, 0);
+        mainBody.setLinearVelocity(0, 0);
     }
 
     public void resetMovement() {
         // Reset any movement-related states if needed
-        getBody().setLinearVelocity(0, 0);
-    }
-//    private void loadShieldAnimation() {
-//        // Load all shield frames into array
-//        shieldFrames = new TextureRegion[4];
-//        for (int i = 0; i < 4; i++) {
-//            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
-//            shieldFrames[i] = new TextureRegion(texture);
-//            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
-//        }
-//        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
-//        shieldStateTime = 0;
-//    }
-
-    public void activateShield() {
-        shieldActive = true;
-        shieldTimeRemaining = SHIELD_DURATION;
-        shieldStateTime = 0;
+        mainBody.setLinearVelocity(0, 0);
     }
 
+    public void takeDamage(float damage) {
+        if (!shieldActive) {
+            health = Math.max(0, health - damage);
+            if (health <= 0 && !isDead) {
+                isDead = true;
+                deathTimer = 0;
+                // Load death animation with 3 frames
+                deathAnimation = createDeathAnimation();
+            }
+        }
+    }
+
+    public void applyKnockback(Vector2 sourcePosition) {
+        if (!isKnockedBack) {
+            Vector2 knockbackDirection = mainBody.getPosition().cpy().sub(sourcePosition).nor();
+            mainBody.setLinearVelocity(knockbackDirection.scl(KNOCKBACK_FORCE));
+            isKnockedBack = true;
+            knockbackTimer = KNOCKBACK_DURATION;
+        }
+    }
+
+
+    public boolean isKnockedBack() {
+        return isKnockedBack;
+    }
+
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
+    }
+
+    // Add this method to handle camera boundaries
+    public Vector2 getCameraBoundedPosition(OrthographicCamera camera) {
+        float cameraHalfWidth = camera.viewportWidth * camera.zoom / 2;
+        float cameraHalfHeight = camera.viewportHeight * camera.zoom / 2;
+
+        // Get current player position
+        float x = mainBody.getPosition().x * PPM;
+        float y = mainBody.getPosition().y * PPM;
+
+        // Calculate bounded camera position
+        float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING),
+                                mapWidth - cameraHalfWidth + CAMERA_PADDING);
+        float boundedY = Math.min(Math.max(y, cameraHalfHeight - CAMERA_PADDING),
+                                mapHeight - cameraHalfHeight + CAMERA_PADDING);
+
+        return new Vector2(boundedX, boundedY);
+    }
+
+    private Animation<TextureRegion> createDeathAnimation() {
+        TextureRegion[] frames = new TextureRegion[3];
+        frames[0] = new TextureRegion(new Texture("sprites/Defeated1.png"));
+        frames[1] = new TextureRegion(new Texture("sprites/Defeated2.png"));
+        frames[2] = new TextureRegion(new Texture("sprites/Defeated3.png"));
+        return new Animation<>(0.2f, frames); // 0.2s per frame
+    }
+
+    public void setMapBounds(float width, float height) {
+        this.mapWidth = width;
+        this.mapHeight = height;
+    }
 
 }

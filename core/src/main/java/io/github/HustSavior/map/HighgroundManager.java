@@ -1,16 +1,15 @@
 package io.github.HustSavior.map;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
-import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.Application;
-import com.badlogic.gdx.Gdx;
 
 public class HighgroundManager {
     private static final float HIGHGROUND_OFFSET_X = 5f;
