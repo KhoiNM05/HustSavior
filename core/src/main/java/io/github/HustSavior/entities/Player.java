@@ -108,12 +108,11 @@ public class Player extends Sprite {
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
         // Shield
-        shieldActive = false;
-        shieldTimeRemaining = 0;
-        loadShieldAnimation();
-
-        // Initialize SkillManager
-        this.skillManager = new SkillManager(this, world);
+//        shieldActive = false;
+//        shieldTimeRemaining = 0;
+//        loadShieldAnimation();
+        skillManager=new SkillManager(this, world);
+        skillManager.activateSkills(1);
 
         // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
@@ -153,7 +152,7 @@ public class Player extends Sprite {
 
         PolygonShape mainShape = new PolygonShape();
         mainShape.setAsBox(6 / PPM, 3 / PPM);  // Small box for feet
-        
+
         FixtureDef mainFixture = new FixtureDef();
         mainFixture.shape = mainShape;
         mainFixture.filter.categoryBits = GameConfig.BIT_PLAYER;
@@ -170,7 +169,7 @@ public class Player extends Sprite {
 
         PolygonShape hitShape = new PolygonShape();
         hitShape.setAsBox(8 / PPM, 16 / PPM);  // Larger box for full body
-        
+
         FixtureDef hitFixture = new FixtureDef();
         hitFixture.shape = hitShape;
         hitFixture.isSensor = true;  // No physical response
@@ -187,24 +186,29 @@ public class Player extends Sprite {
     }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
+        super.draw(batch);
+        float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
+        float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
+        setPosition(x, y + 12);  // Offset sprite up from feet position
+        skillManager.drawSkills(batch);
         if (isDead) {
             deathTimer += Gdx.graphics.getDeltaTime();
             TextureRegion currentFrame = deathAnimation.getKeyFrame(deathTimer, false);
-            
+
             if (deathAnimation.isAnimationFinished(deathTimer) && !startFading) {
                 startFading = true;
                 fadeTimer = 0;
             }
-            
+
             if (startFading) {
                 fadeTimer += Gdx.graphics.getDeltaTime();
                 float alpha = Math.min(1, fadeTimer / FADE_DURATION);
                 batch.setColor(1, 1, 1, 1 - alpha); // Fade out player
             }
-            
+
             batch.draw(currentFrame, getX(), getY());
             batch.setColor(1, 1, 1, 1); // Reset batch color
-            
+
             if (startFading && fadeTimer >= FADE_DURATION) {
                 game.setScreen(new DeathScreen(game));
             }
@@ -212,44 +216,36 @@ public class Player extends Sprite {
         }
         Color oldColor = batch.getColor();
         float finalAlpha = alpha;
-        
+
         // If shield is active, use shield alpha instead
         if (shieldActive) {
             finalAlpha = SHIELD_ALPHA;
         }
-        
+
         batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
-        super.draw(batch);
-        
-        // Restore original color
         batch.setColor(oldColor);
-        
-        float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
-        float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
-        setPosition(x, y + 12);  // Offset sprite up from feet position
 
-
-        if (shieldActive) {
-            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
-            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
-            float shieldScale = 0.45f; // Adjust this value to change shield size
-            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
-            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
-
-            // Save current color
-            oldColor = batch.getColor();
-            // Set transparent color
-            batch.setColor(1, 1, 1, SHIELD_ALPHA);
-
-            batch.draw(currentFrame,
-                shieldX,
-                shieldY,
-                currentFrame.getRegionWidth() * shieldScale,
-                currentFrame.getRegionHeight() * shieldScale);
-
-            // Restore original color
-            batch.setColor(oldColor);
-        }
+//        if (shieldActive) {
+//            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
+//            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
+//            float shieldScale = 0.45f; // Adjust this value to change shield size
+//            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
+//            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
+//
+//            // Save current color
+//            oldColor = batch.getColor();
+//            // Set transparent color
+//            batch.setColor(1, 1, 1, SHIELD_ALPHA);
+//
+//            batch.draw(currentFrame,
+//                shieldX,
+//                shieldY,
+//                currentFrame.getRegionWidth() * shieldScale,
+//                currentFrame.getRegionHeight() * shieldScale);
+//
+//            // Restore original color
+//            batch.setColor(oldColor);
+//        }
 
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
@@ -287,7 +283,7 @@ public class Player extends Sprite {
         // Draw player collision boxes
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeType.Line);
-        
+
         // Draw main body (feet) in blue
         shapeRenderer.setColor(0, 0, 1, 1);
         Vector2 mainPos = mainBody.getPosition();
@@ -297,7 +293,7 @@ public class Player extends Sprite {
             12,                   // Full width
             6                     // Full height
         );
-        
+
         // Draw hit body (full body) in red
         shapeRenderer.setColor(1, 0, 0, 1);
         Vector2 hitPos = hitBody.getPosition();
@@ -307,7 +303,7 @@ public class Player extends Sprite {
             16,                   // Full width
             32                    // Full height
         );
-        
+
         shapeRenderer.end();
     }
 
@@ -332,6 +328,7 @@ public class Player extends Sprite {
 //                shieldStateTime = 0;
 //            }
 //        }
+        skillManager.update(delta);
 
     }
 
@@ -349,16 +346,22 @@ public class Player extends Sprite {
 
 
     public void acquireEffect(int itemId) {
-        // Skip skill activation if skillManager is null
-        if (skillManager == null) {
-            // Handle shield effect directly
-            if (itemId == 5) { // Assuming 5 is the shield item ID
-                activateShield();
-                return;
-            }
-            return;
+//        // Skip skill activation if skillManager is null
+//        if (skillManager == null) {
+//            // Handle shield effect directly
+//            if (itemId == 5) { // Assuming 5 is the shield item ID
+//                // activateShield();
+//                skillManager.activateSkills(2);
+//                return;
+//            }
+//            return;
+//        }
+//        skillManager.activateSkills(itemId);
+        switch(itemId){
+            case 1: break;
+            case 4: heal(50); break;
+            case 5: skillManager.activateSkills(2); break;
         }
-        skillManager.activateSkills(itemId);
     }
 
     public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}
@@ -378,17 +381,17 @@ public class Player extends Sprite {
         mainBody.setLinearVelocity(0, 0);
     }
 
-    private void loadShieldAnimation() {
-        // Load all shield frames into array
-        shieldFrames = new TextureRegion[4];
-        for (int i = 0; i < 4; i++) {
-            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
-            shieldFrames[i] = new TextureRegion(texture);
-            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
-        }
-        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
-        shieldStateTime = 0;
-    }
+//    private void loadShieldAnimation() {
+//        // Load all shield frames into array
+//        shieldFrames = new TextureRegion[4];
+//        for (int i = 0; i < 4; i++) {
+//            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
+//            shieldFrames[i] = new TextureRegion(texture);
+//            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
+//        }
+//        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
+//        shieldStateTime = 0;
+//    }
 
     public void activateShield() {
         shieldActive = true;
@@ -431,17 +434,17 @@ public class Player extends Sprite {
     public Vector2 getCameraBoundedPosition(OrthographicCamera camera) {
         float cameraHalfWidth = camera.viewportWidth * camera.zoom / 2;
         float cameraHalfHeight = camera.viewportHeight * camera.zoom / 2;
-        
+
         // Get current player position
         float x = mainBody.getPosition().x * PPM;
         float y = mainBody.getPosition().y * PPM;
-        
+
         // Calculate bounded camera position
-        float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING), 
+        float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING),
                                 mapWidth - cameraHalfWidth + CAMERA_PADDING);
-        float boundedY = Math.min(Math.max(y, cameraHalfHeight - CAMERA_PADDING), 
+        float boundedY = Math.min(Math.max(y, cameraHalfHeight - CAMERA_PADDING),
                                 mapHeight - cameraHalfHeight + CAMERA_PADDING);
-        
+
         return new Vector2(boundedX, boundedY);
     }
 

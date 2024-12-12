@@ -23,7 +23,7 @@ public class SkillManager {
 
     public void activateSkills(int id){
         if (id==MELEE){
-            skillList.add(new Slash(new Sprite(new Texture("skills/SlashSprite.png")),player, world));
+            skillList.add(new Slash(new Sprite(new Texture("skills/Slash1.png")),player, world));
         }
         else if(id==SHIELD){
             skillList.add(new Shield(new Sprite(new Texture("item/shield.png")), player, world));
