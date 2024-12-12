@@ -112,6 +112,8 @@ public class Player extends Sprite {
     private static final float ANIMATION_FRAME_DURATION = 0.15f;  // Slower animation (was 0.1f)
     private static final int FRAME_COUNT = 2;  // We have 2 frames per direction
 
+    private OrthographicCamera camera;  // Add at class level
+
     public Player(Sprite sprite, float x, float y, World world, Game game, TiledMap tiledMap) {
         super(sprite);
         this.game = game;
@@ -159,7 +161,7 @@ public class Player extends Sprite {
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
         
-       
+        this.camera = new OrthographicCamera();
     }
 
     public float getHealth() {
@@ -192,10 +194,9 @@ public class Player extends Sprite {
     }
 
 
-    public void draw(SpriteBatch batch, OrthographicCamera camera) {
-        super.draw(batch);
-        float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
-        float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
+    public void draw(SpriteBatch batch) {
+        float x = position.x * PPM - getWidth() / 2;
+        float y = position.y * PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
         skillManager.drawSkills(batch);
         if (isDead) {
@@ -232,8 +233,7 @@ public class Player extends Sprite {
         batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
         batch.setColor(oldColor);
         
-        float x = position.x * GameConfig.PPM - getWidth() / 2;
-        float y = position.y * GameConfig.PPM - getHeight() / 2;
+    
         setPosition(x, y + 12);  // Offset sprite up from feet position
 
 
@@ -549,6 +549,10 @@ public class Player extends Sprite {
         if (bounds != null) {
             bounds.setPosition(screenX, screenY);
         }
+    }
+
+    public void setCamera(OrthographicCamera camera) {
+        this.camera = camera;
     }
 
 }

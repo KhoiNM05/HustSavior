@@ -56,7 +56,6 @@ import io.github.HustSavior.items.Shield;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
-import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.Slash;
 import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.spawn.SpawnManager;
@@ -206,6 +205,7 @@ public class Play implements Screen {
             game,
             gameMap.getTiledMap()  // Pass the TiledMap from gameMap
         );
+        player.setCamera(camera);
         inputHandler = new InputHandler(player);
         bulletManager = new BulletManager(player, monsters);
         assetSetter = new AssetSetter();
@@ -242,6 +242,7 @@ public class Play implements Screen {
 
         // Initialize transparency manager with map layers
         shapeRenderer = new ShapeRenderer();
+        skin = new Skin(Gdx.files.internal("uiskin.json"));
 
         lowgroundManager = new LowgroundManager(gameMap.getTiledMap());
 
@@ -515,7 +516,7 @@ public class Play implements Screen {
         batch.begin();
         bulletManager.render(batch, viewBounds);
         assetSetter.drawVisibleObjects(batch, viewBounds);
-        player.draw(batch, camera);
+        player.draw(batch);
         batch.end();
     }
 
@@ -535,6 +536,7 @@ public class Play implements Screen {
 
     @Override
     public void dispose() {
+        batch.dispose();
         // Dispose physics world and bodies first
         if (world != null) {
             // Remove all bodies safely
@@ -722,23 +724,18 @@ public class Play implements Screen {
     
 
     private void updateMonsters(float delta) {
-        // Comment out monster updates
-        /*
-        monsterSpawnManager.update(delta);
+        // Update all monsters
         for (AbstractMonster monster : monsters) {
             monster.update(delta, player);
             monster.render(batch);
         }
-        */
         
-        // Remove dead monsters
-        // for (int i = monsters.size - 1; i >= 0; i--) {
-        //     if (!monsters.get(i).isAlive()) {
-        //         AbstractMonster monster = monsters.removeIndex(i);
-        //         monster.dispose();
-        //         world.destroyBody(monster.getBody());
-        //     }
-        // }
+        for (int i = monsters.size() - 1; i >= 0; i--) {
+            if (!monsters.get(i).isAlive()) {
+                AbstractMonster monster = monsters.remove(i);
+                monster.dispose();
+            }
+        }
     }
 
     private void initializeMapBounds() {
