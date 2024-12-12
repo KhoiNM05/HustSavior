@@ -17,4 +17,8 @@ public interface Skills {
 
     boolean isReady();
 
+    CooldownController getCooldown();
+
+    void setAOE(float scale);
+
 }

@@ -47,6 +47,23 @@ public class SkillManager {
     }
 
     public void applyBuff(int id){
+        if (id==1){
+            cooldownReduction(0.5f);
+        }
+        else if (id==2){
+            increaseAOE(2.0f);
+        }
+    }
 
+    private void cooldownReduction(float scale){
+        for (int i=0; i<skillList.size(); i++){
+            skillList.get(i).getCooldown().setCooldown(scale);
+        }
+    }
+
+    private void increaseAOE(float scale){
+        for (int i=0; i<skillList.size(); i++){
+            skillList.get(i).setAOE(scale);
+        }
     }
 }

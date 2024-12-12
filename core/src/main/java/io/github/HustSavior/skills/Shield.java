@@ -19,7 +19,6 @@ public class Shield extends Sprite implements Skills{
     final static float SHIELD_ANIMATION_FRAME_DURATION=0.1f;
     private final static float SHIELD_ALPHA=0.5f;
     private final static float SHIELD_DURATION=3f;
-    private final static float PPM= GameConfig.PPM;
     boolean shieldActive;
     private float shieldTimeRemaining;
 
@@ -84,7 +83,9 @@ public class Shield extends Sprite implements Skills{
     public void update(float delta){
 
         if(shieldActive){
+            hitbox=createHitbox((int)getX(), (int)getY(), player.getPPM(), world);
             shieldTimeRemaining -= delta;
+
             if (shieldTimeRemaining <= 0) {
                 shieldActive = false;
                 cd.resetCooldown();
@@ -96,6 +97,7 @@ public class Shield extends Sprite implements Skills{
             if (cd.isReady()){
                 shieldActive=true;
                 shieldTimeRemaining=SHIELD_DURATION;
+
             }
         }
 
@@ -121,4 +123,10 @@ public class Shield extends Sprite implements Skills{
     }
 
     public boolean isReady(){return cd.isReady();}
+
+    public CooldownController getCooldown(){return cd;}
+
+    public void setAOE(float scale){
+        setSize(getRegionWidth()*scale, getRegionHeight()*scale);
+    }
 }

@@ -21,7 +21,7 @@ public class CooldownController {
         timer=0;
     }
 
-    void freezeCooldown(){
-
+    void setCooldown(float scale){
+        cooldown*=scale;
     }
 }
