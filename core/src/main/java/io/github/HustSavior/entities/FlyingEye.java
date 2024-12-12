@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.World;
 
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
@@ -16,18 +15,16 @@ public class FlyingEye extends AbstractMonster {
     private static final float FLYING_EYE_SPEED = 1f;
     private float attackTimer = 0;
 
-    public FlyingEye(World world, float x, float y) {
-        this.world = world;
-        this.hp = 60;           // Weaker but faster
+    public FlyingEye(float x, float y) {
+        this.hp = 60;
         this.attack = 10;
         this.speed = FLYING_EYE_SPEED;
         this.currentState = MonsterState.IDLE;
-        
         createBody(x, y);
     }
 
     @Override
-    protected void initializeAnimations() {
+    public void initializeAnimations() {
         Texture idleSheet = new Texture("sprites/monster/Flying eye/Flight.png");
         Texture attackSheet = new Texture("sprites/monster/Flying eye/Attack.png");
         Texture hitSheet = new Texture("sprites/monster/Flying eye/Take Hit.png");
@@ -50,8 +47,8 @@ public class FlyingEye extends AbstractMonster {
         updateAnimation(delta);
         attackTimer -= delta;
 
-        Vector2 playerPos = player.getBody().getPosition();
-        Vector2 monsterPos = body.getPosition();
+        Vector2 playerPos = player.getPosition();
+        Vector2 monsterPos = position;
         Vector2 direction = new Vector2(playerPos).sub(monsterPos);
         float distance = direction.len();
 
@@ -66,14 +63,14 @@ public class FlyingEye extends AbstractMonster {
                     player.takeDamage(attack);
                     attackTimer = ATTACK_COOLDOWN;
                 }
-                body.setLinearVelocity(0, 0);
+                velocity.setZero();
             } else {
                 currentState = MonsterState.RUNNING;
-                body.setLinearVelocity(direction.x * speed, direction.y * speed);
+                velocity.set(direction.x * speed, direction.y * speed);
             }
         } else {
             currentState = MonsterState.IDLE;
-            body.setLinearVelocity(0, 0);
+            velocity.setZero();
         }
     }
 
@@ -120,8 +117,8 @@ public class FlyingEye extends AbstractMonster {
         }
         
         if (currentFrame != null) {
-            float x = body.getPosition().x * PPM - currentFrame.getRegionWidth() / 2f;
-            float y = body.getPosition().y * PPM - currentFrame.getRegionHeight() / 2f;
+            float x = position.x * PPM - currentFrame.getRegionWidth() / 2f;
+            float y = position.y * PPM - currentFrame.getRegionHeight() / 2f;
             
             if (isFlipped) {
                 batch.draw(currentFrame, 

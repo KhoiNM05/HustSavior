@@ -5,15 +5,20 @@ import java.util.List;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.utils.Disposable;
 
 import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.GameConfig;
 
-public class BuildingTransparencyManager extends TransparencyManager {
+public class BuildingTransparencyManager extends TransparencyManager implements Disposable {
     private final MapLayer d3Layer;
     private final MapLayer d5Layer;
     private final MapLayer d35Layer;
@@ -38,17 +43,83 @@ public class BuildingTransparencyManager extends TransparencyManager {
         this.monsters = new ArrayList<>();
     }
     
-    @Override
-    public void update(Player player) {
-        float playerX = player.getBody().getPosition().x * GameConfig.PPM;
-        float playerY = player.getBody().getPosition().y * GameConfig.PPM;
+   
+    
+    public void update(Vector2 position) {
+        if (position == null) {
+          
+            return;
+        }
+
+        // Convert position to world coordinates (multiply by PPM since position is in physics units)
+        float playerX = position.x * GameConfig.PPM;
+        float playerY = position.y * GameConfig.PPM;
         
-        updateLayerTransparency(d3Layer, playerX, playerY, player);
-        updateLayerTransparency(d5Layer, playerX, playerY, player);
-        updateLayerTransparency(d35Layer, playerX, playerY, player);
-        updateLayerTransparency(libraryLayer, playerX, playerY, player);
-        updateLayerTransparency(roofLayer, playerX, playerY, player);
-        updateLayerTransparency(parkingLayer, playerX, playerY, player);
+      
+      
+
+     
+     
+        
+        // Update each building layer based on its corresponding bounds layer
+        checkAndUpdateLayer(d3Layer, playerX, playerY, "D3_bounds", "D3");
+        checkAndUpdateLayer(d5Layer, playerX, playerY, "D5_bounds", "D5");
+        checkAndUpdateLayer(d35Layer, playerX, playerY, "D35_bounds", "D35");
+        checkAndUpdateLayer(libraryLayer, playerX, playerY, "Library_bounds", "Library");
+        checkAndUpdateLayer(roofLayer, playerX, playerY, "Roof_bounds", "Roof");
+        checkAndUpdateLayer(parkingLayer, playerX, playerY, "Parking_bounds", "Parking");
+    }
+
+    private void checkAndUpdateLayer(MapLayer layer, float x, float y, String boundsLayerName, String layerName) {
+        // First check if the layer exists
+        if (layer == null) {
+          
+            return;
+        }
+
+        // Get and check the bounds layer
+        MapLayer boundsLayer = map.getLayers().get(boundsLayerName);
+        if (boundsLayer == null) {
+            
+            return;
+        }
+
+      
+       
+
+        // Check if player is in bounds
+        boolean isInBounds = isPlayerInBuildingBounds(x, y, boundsLayer);
+        
+        // Set layer opacity based on player position
+        float currentOpacity = layer.getOpacity();
+        float targetOpacity = isInBounds ? TRANSPARENT_ALPHA : OPAQUE_ALPHA;
+        
+        if (Math.abs(currentOpacity - targetOpacity) > 0.01f) {
+            layer.setOpacity(targetOpacity);
+           
+        }
+    }
+
+    protected boolean isPlayerInBuildingBounds(float playerX, float playerY, MapLayer boundsLayer) {
+        // Convert player position from physics units to pixel units
+        float playerXInPixels = playerX / GameConfig.PPM;
+        float playerYInPixels = playerY / GameConfig.PPM;
+
+        for (MapObject object : boundsLayer.getObjects()) {
+            if (object instanceof RectangleMapObject) {
+                RectangleMapObject rectangleObject = (RectangleMapObject) object;
+                Rectangle rect = rectangleObject.getRectangle();
+                
+                // Debug the bounds check
+         
+                
+                if (rect.contains(playerXInPixels, playerYInPixels)) {
+                
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void onPlayerEnter(Fixture fixture) {
@@ -108,6 +179,16 @@ public class BuildingTransparencyManager extends TransparencyManager {
     
     public void addMonster(AbstractMonster monster) {
         monsters.add(monster);
+    }
+
+    @Override
+    public void dispose() {
+        // Clean up any resources
+    }
+
+
+    public void update(Player player) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 } 
     

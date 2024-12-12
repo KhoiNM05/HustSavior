@@ -10,15 +10,12 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
 
 import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
-import io.github.HustSavior.entities.Skeleton;
-import io.github.HustSavior.entities.Mushroom;
-import io.github.HustSavior.entities.Goblin;
-import io.github.HustSavior.entities.FlyingEye;
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class MonsterSpawnManager {
@@ -34,6 +31,8 @@ public class MonsterSpawnManager {
     private final TiledMap map;
     private final Array<Rectangle> spawnRectangles = new Array<>();
     private final Array<Polygon> spawnPolygons = new Array<>();
+    private final MonsterPool monsterPool;
+    private int totalSpawned = 0;
     
     public MonsterSpawnManager(World world, Player player, Array<AbstractMonster> monsters, Camera camera, TiledMap map) {
         this.world = world;
@@ -41,6 +40,7 @@ public class MonsterSpawnManager {
         this.monsters = monsters;
         this.camera = camera;
         this.map = map;
+        this.monsterPool = new MonsterPool();
         loadSpawnAreas();
     }
     
@@ -103,22 +103,23 @@ public class MonsterSpawnManager {
             boolean spawned = false;
 
             while (!spawned && attempts < maxAttempts) {
-                // Randomly select a spawn rectangle
                 Rectangle spawnRect = spawnRectangles.random();
                 if (spawnRect != null) {
-                    // Generate random position within the rectangle
                     float x = spawnRect.x + MathUtils.random(spawnRect.width);
                     float y = spawnRect.y + MathUtils.random(spawnRect.height);
                     
-                    // Convert to Box2D coordinates
                     x /= PPM;
                     y /= PPM;
 
-                    if (isOutsideCamera(x, y) && isPositionClear(x, y)) {
+                    if (isInSpawnArea(x, y) && isOutsideCamera(x, y) && 
+                        isPositionClear(x, y) && isWithinSpawnDistance(x, y)) {
                         AbstractMonster monster = createRandomMonster(x, y);
                         if (monster != null) {
                             monsters.add(monster);
                             spawned = true;
+                            totalSpawned++;
+                            Gdx.app.log("MonsterSpawn", "Monster spawned! Total spawned: " + totalSpawned + 
+                                ", Current active: " + monsters.size);
                         }
                     }
                 }
@@ -162,32 +163,18 @@ public class MonsterSpawnManager {
     
     private AbstractMonster createRandomMonster(float x, float y) {
         try {
-            // Random number between 0 and 3 for four monster types
             int monsterType = MathUtils.random(3);
-            AbstractMonster monster = null;
-            
-            switch (monsterType) {
-                case 0:
-                    monster = new Skeleton(world, x, y);
-                    break;
-                case 1:
-                    monster = new Mushroom(world, x, y);
-                    break;
-                case 2:
-                    monster = new Goblin(world, x, y);
-                    break;
-                case 3:
-                    monster = new FlyingEye(world, x, y);
-                    break;
-            }
-            
-            if (monster != null) {
-                monster.init();
-            }
-            return monster;
+            return monsterPool.obtain(monsterType, x, y);
         } catch (Exception e) {
             Gdx.app.error("Spawn", "Failed to spawn monster: " + e.getMessage());
             return null;
         }
+    }
+    
+    private boolean isWithinSpawnDistance(float x, float y) {
+        Vector2 playerPos = player.getPosition();
+        float distance = Vector2.dst(playerPos.x, playerPos.y, x, y);
+
+        return distance >= MIN_SPAWN_DISTANCE && distance <= MAX_SPAWN_DISTANCE;
     }
 } 

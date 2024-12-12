@@ -5,9 +5,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Window.WindowStyle;
+import com.badlogic.gdx.utils.Disposable;
+
 import io.github.HustSavior.input.InputHandler;
 
-public class WarningDialog extends BaseDialog {
+public class WarningDialog extends BaseDialog implements Disposable {
     private static final float COOLDOWN_DURATION = 2f;
     private float cooldownTimer = 0f;
     private boolean isOnCooldown = false;
@@ -81,5 +83,12 @@ public class WarningDialog extends BaseDialog {
 
     public boolean isOnCooldown() {
         return isOnCooldown;
+    }
+
+    @Override
+    public void dispose() {
+        if (dialog != null) {
+            dialog.remove();
+        }
     }
 } 

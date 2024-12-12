@@ -5,14 +5,8 @@ import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.World;
-
-import io.github.HustSavior.entities.Player;
-import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public abstract class TransparencyManager {
     protected static final float TRANSPARENT_ALPHA = 0.3f;
@@ -32,52 +26,16 @@ public abstract class TransparencyManager {
         this.world = world;
     }
     
-    public abstract void update(Player player);
+    public abstract void update(Vector2 position);
     
-    protected void updateLayerTransparency(MapLayer layer, float playerX, float playerY, Player player) {
+    protected void updateLayerTransparency(MapLayer layer, float x, float y, String boundsName) {
         if (layer == null) return;
         
-        String boundsLayerName = layer.getName() + BOUNDS_SUFFIX;
-        MapLayer boundsLayer = map.getLayers().get(boundsLayerName);
+        // Check if player is in bounds
+        boolean isInBounds = checkBounds(x, y, boundsName);
         
-        if (boundsLayer == null) {
-            System.out.println("Warning: No bounds layer found for " + layer.getName());
-            return;
-        }
-        
-        // Create Box2D fixtures for bounds
-        for (RectangleMapObject rectangleObject : boundsLayer.getObjects().getByType(RectangleMapObject.class)) {
-            Rectangle rect = rectangleObject.getRectangle();
-            // Create fixture with TRANSPARENCY_BOUNDS_BITS
-            BodyDef bodyDef = new BodyDef();
-            bodyDef.type = BodyDef.BodyType.StaticBody;
-            Body body = world.createBody(bodyDef);
-            
-            PolygonShape shape = new PolygonShape();
-            shape.setAsBox(rect.width / 2 / PPM, rect.height / 2 / PPM);
-            
-            FixtureDef fixtureDef = new FixtureDef();
-            fixtureDef.shape = shape;
-            fixtureDef.isSensor = true;
-            fixtureDef.filter.categoryBits = TRANSPARENCY_BOUNDS_BITS;
-            fixtureDef.filter.maskBits = MONSTER_CATEGORY | PLAYER_CATEGORY;
-            
-            body.setUserData(boundsLayerName);
-            body.createFixture(fixtureDef);
-            shape.dispose();
-        }
-        
-        boolean isInBounds = isPlayerInBounds(playerX, playerY, boundsLayer);
-        
-        // Update layer transparency
-        layer.setOpacity(isInBounds ? TRANSPARENT_ALPHA : OPAQUE_ALPHA);
-        
-        // Update player transparency
-        if (isInBounds) {
-            player.setAlpha(PLAYER_TRANSPARENT_ALPHA);
-        } else {
-            player.setAlpha(PLAYER_OPAQUE_ALPHA);
-        }
+        // Update layer opacity
+        layer.setOpacity(isInBounds ? 0.5f : 1.0f);  // Adjust transparency values as needed
     }
     
     protected Rectangle getBoundsFromObjectLayer(MapLayer objectLayer) {
@@ -111,5 +69,11 @@ public abstract class TransparencyManager {
             }
         }
         return false;
+    }
+    
+    protected boolean checkBounds(float x, float y, String boundsName) {
+        if (boundsName == null) return false;
+        MapLayer boundsLayer = map.getLayers().get(boundsName);
+        return isPlayerInBounds(x, y, boundsLayer);
     }
 } 
