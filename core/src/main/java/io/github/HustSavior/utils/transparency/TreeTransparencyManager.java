@@ -7,11 +7,11 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.utils.Disposable;
 
-import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.utils.GameConfig;
 
-public class TreeTransparencyManager extends TransparencyManager {
+public class TreeTransparencyManager extends TransparencyManager implements Disposable {
     private static final int NUMBER_OF_TREE_LAYERS = 5;
     private static final String BOUNDS_LAYER = "_bounds";
     
@@ -28,19 +28,13 @@ public class TreeTransparencyManager extends TransparencyManager {
             boundLayers[i] = map.getLayers().get("Tree" + (i + 1) + "_bounds");
         }
     }
-    
-    @Override
-    public void update(Player player) {
-        // Get the position from the player's physics body
-        Vector2 position = player.getBody().getPosition();
-        // Convert Box2D coordinates to world coordinates
-        float playerX = position.x * GameConfig.PPM;
-        float playerY = position.y * GameConfig.PPM;
+
+    public void update(Vector2 position) {
+        float playerX = position.x;
+        float playerY = position.y;
         
         for (int i = 0; i < NUMBER_OF_TREE_LAYERS; i++) {
-            if (treeLayers[i] != null && boundLayers[i] != null) {
-                updateLayerTransparencyWithBounds(treeLayers[i], boundLayers[i], playerX, playerY);
-            }
+            updateLayerTransparencyWithBounds(treeLayers[i], boundLayers[i], playerX, playerY);
         }
     }
     
@@ -68,5 +62,10 @@ public class TreeTransparencyManager extends TransparencyManager {
     private void updateObjectTransparency(MapLayer layer, boolean transparent) {
         float alpha = transparent ? 0.5f : 1.0f;  // Adjust alpha values as needed
         layer.setOpacity(alpha);
+    }
+    
+    @Override
+    public void dispose() {
+        // Clean up any resources if needed
     }
 } 

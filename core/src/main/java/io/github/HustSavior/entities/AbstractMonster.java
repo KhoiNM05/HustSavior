@@ -3,15 +3,10 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.CircleShape;
-import com.badlogic.gdx.physics.box2d.Fixture;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.RayCastCallback;
-import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
 import static io.github.HustSavior.utils.GameConfig.PPM;
@@ -34,8 +29,11 @@ public abstract class AbstractMonster {
     protected boolean isFlipped = false;
     
     // Physics
-    protected Body body;
-    protected World world;
+    protected Vector2 position;
+    protected Vector2 velocity;
+    protected Rectangle bounds;
+    protected float width;
+    protected float height;
     
     // Animation components
     protected Animation<TextureRegion> idleAnimation;
@@ -110,7 +108,7 @@ public abstract class AbstractMonster {
     protected static final float ATTACK_RANGE = 0.8f;   // Reduced from 1.2f to 0.8f for closer attacks
     
     // Abstract methods that must be implemented by specific monsters
-    protected abstract void initializeAnimations();
+    public abstract void initializeAnimations();
     protected abstract void disposeMonster();
     
     // Common methods
@@ -120,8 +118,8 @@ public abstract class AbstractMonster {
         TextureRegion currentFrame = getCurrentAnimation().getKeyFrame(stateTime, true);
         if (currentFrame == null) return;
         
-        float x = body.getPosition().x * PPM - currentFrame.getRegionWidth() / 2;
-        float y = body.getPosition().y * PPM - currentFrame.getRegionHeight() / 2;
+        float x = position.x - currentFrame.getRegionWidth() / 2;
+        float y = position.y - currentFrame.getRegionHeight() / 2;
         
         if (isFlipped != currentFrame.isFlipX()) {
             currentFrame.flip(true, false);
@@ -142,27 +140,9 @@ public abstract class AbstractMonster {
     }
     
     protected void createBody(float x, float y) {
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(x, y);
-        bodyDef.fixedRotation = true;
-        
-        body = world.createBody(bodyDef);
-        body.setUserData(this);
-        
-        CircleShape shape = new CircleShape();
-        shape.setRadius(0.3f);
-        
-        FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = shape;
-        fixtureDef.density = 1.0f;
-        fixtureDef.friction = 0.4f;
-        fixtureDef.restitution = 0.1f;
-        fixtureDef.filter.categoryBits = MONSTER_CATEGORY;
-        fixtureDef.filter.maskBits = (short)(MONSTER_MASK | COLLISION_LAYER_BITS | TRANSPARENCY_BOUNDS_BITS);
-        
-        body.createFixture(fixtureDef);
-        shape.dispose();
+        position = new Vector2(x, y);
+        velocity = new Vector2();
+        bounds = new Rectangle(x - width/2, y - height/2, width, height);
     }
     
     public boolean isAlive() {
@@ -179,7 +159,12 @@ public abstract class AbstractMonster {
     }
     
     // Getters
-    public Body getBody() { return body; }
+    public Rectangle getBounds() { return new Rectangle(
+        position.x - bounds.width/2,
+        position.y - bounds.height/2,
+        bounds.width,
+        bounds.height
+    ); }
     public float getHp() { return hp; }
     public float getAttack() { return attack; }
     
@@ -215,8 +200,8 @@ public abstract class AbstractMonster {
         }
         
         if (currentFrame != null) {
-            float x = body.getPosition().x * PPM - currentFrame.getRegionWidth() / 2f;
-            float y = body.getPosition().y * PPM - currentFrame.getRegionHeight() / 2f;
+            float x = position.x - currentFrame.getRegionWidth() / 2f;
+            float y = position.y - currentFrame.getRegionHeight() / 2f;
             
             if (isFlipped) {
                 batch.draw(currentFrame, 
@@ -245,51 +230,32 @@ public abstract class AbstractMonster {
     protected static final float POSITION_UPDATE_INTERVAL = 1/60f; // 60 times per second
     protected float positionUpdateTimer = 0;
     
+    protected TileCollision tileCollision;
+    
+    public void setTileCollision(TileCollision tileCollision) {
+        this.tileCollision = tileCollision;
+    }
+    
     public void update(float delta, Player player) {
         if (!isAlive()) {
             currentState = MonsterState.DEATH;
+            velocity.setZero();
             return;
         }
 
-        // Update position based on ground height
-        positionUpdateTimer += delta;
-        if (positionUpdateTimer >= POSITION_UPDATE_INTERVAL) {
-            positionUpdateTimer = 0;
-            Vector2 currentPos = body.getPosition();
-            
-            // Check and update highground position
-            Vector2 highgroundPos = highgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
-            // Check and update lowground position
-            Vector2 lowgroundPos = lowgroundManager.updatePosition(currentPos.x * PPM, currentPos.y * PPM);
-            
-            // Apply position updates if needed
-            if (highgroundManager.isInHighground() || lowgroundManager.isInLowground()) {
-                body.setTransform(
-                    highgroundManager.isInHighground() ? highgroundPos.x / PPM : lowgroundPos.x / PPM,
-                    highgroundManager.isInHighground() ? highgroundPos.y / PPM : lowgroundPos.y / PPM,
-                    0
-                );
-            }
-        }
-
-        // Debug: Check visibility status
-        boolean visibilityStatus = isInSameTransparencyBounds(player);
-        System.out.println("Debug: Visibility status for monster: " + visibilityStatus);
-        setVisible(visibilityStatus);
-
-        updateAnimation(delta);
-        updateTimers(delta);
+        // Update position based on velocity
+        position.add(velocity.x * delta, velocity.y * delta);
+        bounds.setPosition(position.x - width/2, position.y - height/2);
         
-        if (stateTransitionTimer > 0) {
-            handleStateTransition(delta);
-            return;
-        }
-
-        // Handle attack and movement separately
-        handleAttack(player);
-        if (currentState != MonsterState.ATTACKING) {
-            handleMovement(player);
-        }
+        updateAnimation(delta);
+    }
+    
+    protected boolean isPlayerInRange(Player player) {
+        float distance = Vector2.dst(
+            position.x, position.y,
+            player.getPosition().x, player.getPosition().y
+        );
+        return distance <= DETECTION_RANGE * PPM;
     }
     
     private void updateTimers(float delta) {
@@ -309,11 +275,10 @@ public abstract class AbstractMonster {
     private void handleAttack(Player player) {
         // Only check for new attacks if not already attacking or finishing attack
         if (currentState != MonsterState.ATTACKING && !isFinishingAttack) {
-            Vector2 toPlayer = player.getBody().getPosition().cpy().sub(body.getPosition());
+            Vector2 toPlayer = player.getPosition().cpy().sub(position);
             float distanceToPlayer = toPlayer.len();
 
             if (distanceToPlayer <= DAMAGE_RADIUS && attackTimer <= 0) {
-                body.setLinearVelocity(0, 0);
                 changeState(MonsterState.ATTACKING);
                 isFinishingAttack = true;
                 stateTime = 0;
@@ -322,80 +287,10 @@ public abstract class AbstractMonster {
             }
         } else {
             // Keep monster completely stationary during attack
-            body.setLinearVelocity(0, 0);
+            velocity.set(0, 0);
         }
     }
     
-    private void handleMovement(Player player) {
-        if (currentState == MonsterState.ATTACKING || isFinishingAttack) {
-            body.setLinearVelocity(0, 0);
-            return;
-        }
-
-        Vector2 toPlayer = player.getBody().getPosition().cpy().sub(body.getPosition());
-        float distanceToPlayer = toPlayer.len();
-        
-        if (distanceToPlayer > PERSONAL_SPACE) {
-            Vector2 moveDirection = toPlayer.nor();
-            
-            // Check for obstacles in the direct path
-            final boolean[] hit = {false}; // Use array to store hit status
-            RayCastCallback rayCastCallback = new RayCastCallback() {
-                @Override
-                public float reportRayFixture(Fixture fixture, Vector2 point, Vector2 normal, float fraction) {
-                    if ((fixture.getFilterData().categoryBits & COLLISION_LAYER_BITS) != 0) {
-                        hit[0] = true;
-                        return 0;
-                    }
-                    return -1;
-                }
-            };
-            
-            world.rayCast(rayCastCallback, body.getPosition(), player.getBody().getPosition());
-            
-            // If there's an obstacle, try to find alternative path
-            if (hit[0]) {
-                // Try moving along the wall
-                Vector2 leftPath = moveDirection.cpy().rotate90(1);
-                Vector2 rightPath = moveDirection.cpy().rotate90(-1);
-                
-                // Check which direction has fewer obstacles
-                if (checkPath(leftPath)) {
-                    moveDirection = leftPath;
-                } else if (checkPath(rightPath)) {
-                    moveDirection = rightPath;
-                }
-            }
-            
-            body.setLinearVelocity(moveDirection.x * speed, moveDirection.y * speed);
-            if (currentState != MonsterState.RUNNING) {
-                changeState(MonsterState.RUNNING);
-            }
-            isFlipped = moveDirection.x < 0;
-        } else {
-            body.setLinearVelocity(0, 0);
-        }
-    }
-    
-    private boolean checkPath(Vector2 direction) {
-        final boolean[] clear = {true};
-        RayCastCallback pathCheck = new RayCastCallback() {
-            @Override
-            public float reportRayFixture(Fixture fixture, Vector2 point, Vector2 normal, float fraction) {
-                if ((fixture.getFilterData().categoryBits & COLLISION_LAYER_BITS) != 0) {
-                    clear[0] = false;
-                    return 0;
-                }
-                return -1;
-            }
-        };
-        
-        Vector2 start = body.getPosition();
-        Vector2 end = start.cpy().add(direction.cpy().scl(1.0f));
-        world.rayCast(pathCheck, start, end);
-        
-        return clear[0];
-    }
     
     public void onPlayerCollisionStart() {
         isCollidingWithPlayer = true;
@@ -430,49 +325,12 @@ public abstract class AbstractMonster {
     public void handlePush(Vector2 playerVelocity) {
         if (currentState != MonsterState.ATTACKING && pushRecoveryTimer <= 0) {
             Vector2 pushForce = playerVelocity.cpy().scl(PUSH_FORCE);
-            body.setLinearVelocity(pushForce);
+            velocity.set(pushForce);
             pushRecoveryTimer = PUSH_RECOVERY_TIME;
         }
     }
     
-    private boolean isInSameTransparencyBounds(Player player) {
-        System.out.println("Debug: Starting bounds check");
-        
-        if (map == null || world == null) {
-            System.out.println("Debug: Map or World is null");
-            return true;
-        }
-
-        final boolean[] inSameBounds = {true};
-        float checkRadius = 0.5f; // Adjust this value based on your needs
-
-        System.out.println("Debug: Monster position: " + body.getPosition());
-        System.out.println("Debug: Player position: " + player.getBody().getPosition());
-
-        world.QueryAABB(fixture -> {
-            if ((fixture.getFilterData().categoryBits & TRANSPARENCY_BOUNDS_BITS) != 0) {
-                boolean monsterInBounds = fixture.testPoint(body.getPosition());
-                boolean playerInBounds = fixture.testPoint(player.getBody().getPosition());
-                
-                System.out.println("Debug: Found transparency bounds");
-                System.out.println("Debug: Monster in bounds: " + monsterInBounds);
-                System.out.println("Debug: Player in bounds: " + playerInBounds);
-
-                if (monsterInBounds != playerInBounds) {
-                    inSameBounds[0] = false;
-                    return false;
-                }
-            }
-            return true;
-        }, 
-        body.getPosition().x - checkRadius, 
-        body.getPosition().y - checkRadius,
-        body.getPosition().x + checkRadius, 
-        body.getPosition().y + checkRadius);
-
-        System.out.println("Debug: Final result: " + inSameBounds[0]);
-        return inSameBounds[0];
-    }
+   
     
     public void setMap(TiledMap map) {
         this.map = map;
@@ -504,4 +362,25 @@ public abstract class AbstractMonster {
     
     // In constructor or after setting initial stats:
    
+    public Vector2 getPosition() {
+        return position;
+    }
+    
+    public void setPosition(float x, float y) {
+        position.set(x, y);
+        bounds.setPosition(x, y);
+    }
+    
+    public void setVelocity(float x, float y) {
+        velocity.set(x, y);
+    }
+    
+    public void update(float delta) {
+        // Update position based on velocity
+        position.add(velocity.x * delta, velocity.y * delta);
+        bounds.setPosition(position.x, position.y);
+        
+        // Update animation
+        updateAnimation(delta);
+    }
 } 

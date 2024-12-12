@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.World;
 
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
@@ -16,18 +15,16 @@ public class Mushroom extends AbstractMonster {
     private static final float MUSHROOM_SPEED = 0.5f;
     private float attackTimer = 0;
 
-    public Mushroom(World world, float x, float y) {
-        this.world = world;
-        this.hp = 120;          // High health
-        this.attack = 20;       // High damage but slow
+    public Mushroom(float x, float y) {
+        this.hp = 120;
+        this.attack = 20;
         this.speed = MUSHROOM_SPEED;
         this.currentState = MonsterState.IDLE;
-        
         createBody(x, y);
     }
 
     @Override
-    protected void initializeAnimations() {
+    public void initializeAnimations() {
         Texture idleSheet = new Texture("sprites/monster/Mushroom/Idle.png");
         Texture runSheet = new Texture("sprites/monster/Mushroom/Run.png");
         Texture attackSheet = new Texture("sprites/monster/Mushroom/Attack.png");
@@ -45,18 +42,18 @@ public class Mushroom extends AbstractMonster {
     public void update(float delta, Player player) {
         if (!isAlive()) {
             currentState = MonsterState.DEATH;
+            velocity.setZero();
             return;
         }
 
         updateAnimation(delta);
         attackTimer -= delta;
 
-        Vector2 playerPos = player.getBody().getPosition();
-        Vector2 monsterPos = body.getPosition();
+        Vector2 playerPos = player.getPosition();
+        Vector2 monsterPos = position;
         Vector2 direction = new Vector2(playerPos).sub(monsterPos);
         float distance = direction.len();
 
-        // Update facing direction
         isFlipped = direction.x < 0;
 
         if (distance <= DETECTION_RANGE) {
@@ -68,14 +65,14 @@ public class Mushroom extends AbstractMonster {
                     player.takeDamage(attack);
                     attackTimer = ATTACK_COOLDOWN;
                 }
-                body.setLinearVelocity(0, 0);
+                velocity.setZero();
             } else {
                 currentState = MonsterState.RUNNING;
-                body.setLinearVelocity(direction.x * speed, direction.y * speed);
+                velocity.set(direction.x * speed, direction.y * speed);
             }
         } else {
             currentState = MonsterState.IDLE;
-            body.setLinearVelocity(0, 0);
+            velocity.setZero();
         }
     }
 
@@ -126,8 +123,8 @@ public class Mushroom extends AbstractMonster {
         }
         
         if (currentFrame != null) {
-            float x = body.getPosition().x * PPM - currentFrame.getRegionWidth() / 2f;
-            float y = body.getPosition().y * PPM - currentFrame.getRegionHeight() / 2f;
+            float x = position.x * PPM - currentFrame.getRegionWidth() / 2f;
+            float y = position.y * PPM - currentFrame.getRegionHeight() / 2f;
             
             if (isFlipped) {
                 batch.draw(currentFrame, 

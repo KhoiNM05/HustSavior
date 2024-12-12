@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.World;
 
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
@@ -16,10 +15,9 @@ public class Skeleton extends AbstractMonster {
     private static final float SKELETON_SPEED = 1f;
     private float attackTimer = 0;
 
-    public Skeleton(World world, float x, float y) {
-        this.world = world;
-        this.hp = 80;           // Skeletons are fragile
-        this.attack = 15;       // But hit hard
+    public Skeleton(float x, float y) {
+        this.hp = 80;
+        this.attack = 15;
         this.speed = SKELETON_SPEED;
         this.currentState = MonsterState.IDLE;
         createBody(x, y);
@@ -30,7 +28,7 @@ public class Skeleton extends AbstractMonster {
     }
 
     @Override
-    protected void initializeAnimations() {
+    public void initializeAnimations() {
         // Load all sprite sheets
         Texture idleSheet = new Texture("sprites/monster/Skeleton/Idle.png");
         Texture walkSheet = new Texture("sprites/monster/Skeleton/Walk.png");
@@ -64,18 +62,18 @@ public class Skeleton extends AbstractMonster {
     public void update(float delta, Player player) {
         if (!isAlive()) {
             currentState = MonsterState.DEATH;
+            velocity.setZero();
             return;
         }
 
         updateAnimation(delta);
         attackTimer -= delta;
 
-        Vector2 playerPos = player.getBody().getPosition();
-        Vector2 monsterPos = body.getPosition();
+        Vector2 playerPos = player.getPosition();
+        Vector2 monsterPos = position;
         Vector2 direction = new Vector2(playerPos).sub(monsterPos);
         float distance = direction.len();
 
-        // Update facing direction
         isFlipped = direction.x < 0;
 
         if (distance <= DETECTION_RANGE) {
@@ -87,14 +85,14 @@ public class Skeleton extends AbstractMonster {
                     player.takeDamage(attack);
                     attackTimer = ATTACK_COOLDOWN;
                 }
-                body.setLinearVelocity(0, 0);
+                velocity.setZero();
             } else {
                 currentState = MonsterState.RUNNING;
-                body.setLinearVelocity(direction.x * speed, direction.y * speed);
+                velocity.set(direction.x * speed, direction.y * speed);
             }
         } else {
             currentState = MonsterState.IDLE;
-            body.setLinearVelocity(0, 0);
+            velocity.setZero();
         }
     }
 
@@ -136,8 +134,8 @@ public class Skeleton extends AbstractMonster {
         }
         
         if (currentFrame != null) {
-            float x = body.getPosition().x * PPM - currentFrame.getRegionWidth() / 2f;
-            float y = body.getPosition().y * PPM - currentFrame.getRegionHeight() / 2f;
+            float x = position.x * PPM - currentFrame.getRegionWidth() / 2f;
+            float y = position.y * PPM - currentFrame.getRegionHeight() / 2f;
             
             if (isFlipped) {
                 batch.draw(currentFrame, 

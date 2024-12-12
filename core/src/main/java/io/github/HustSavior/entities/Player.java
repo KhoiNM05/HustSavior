@@ -9,15 +9,12 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.SkillManager;
 import io.github.HustSavior.utils.GameConfig;
@@ -25,23 +22,26 @@ import io.github.HustSavior.utils.GameConfig;
 public class Player extends Sprite {
     private static final float PPM = GameConfig.PPM;
     private static final float ANIMATION_SPEED = 0.2f;
-    private static final float MOVEMENT_SPEED = 120f / PPM;
+    private static final float MOVEMENT_SPEED = 200f;
     private static final float COLLISION_RADIUS = 8f;
 
-    // Physics constants
-    private static final float DENSITY = 1.0f;
-    private static final float FRICTION = 0.4f;
-    private static final float RESTITUTION = 0.0f; // Reduced bounce
+
 
     private float health;
     private float maxHealth;
     private float xp;
     private float maxXp;
+    private float SPEED = 200f;
 
-    public final Animation<TextureRegion> walkLeft;
-    public final Animation<TextureRegion> walkRight;
-    private Body mainBody;  // For ground/wall collisions
-    private Body hitBody;   // For monster collisions
+    public final Animation<TextureRegion> walkLeft = new Animation<>(ANIMATION_SPEED,
+        new TextureRegion(new Texture("sprites/WalkLeft1.png")),
+        new TextureRegion(new Texture("sprites/WalkLeft2.png"))
+    );
+    public final Animation<TextureRegion> walkRight = new Animation<>(ANIMATION_SPEED,
+        new TextureRegion(new Texture("sprites/WalkRight1.png")),
+        new TextureRegion(new Texture("sprites/WalkRight2.png"))
+    );
+    
 
     private static boolean facingLeft;
 
@@ -67,7 +67,7 @@ public class Player extends Sprite {
     // SkillManager
     private SkillManager skillManager;
 
-    private static final float KNOCKBACK_FORCE = 3.0f;
+    private static final float KNOCKBACK_FORCE = 10f;
     private static final float KNOCKBACK_DURATION = 0.2f;
     private float knockbackTimer = 0;
     private boolean isKnockedBack = false;
@@ -91,33 +91,75 @@ public class Player extends Sprite {
     private float fadeTimer = 0;
     private boolean startFading = false;
 
-    public Player(Sprite sprite, float x, float y, World world, Game game) {
+    // Replace Box2D bodies with simple position and hitbox
+    private Vector2 position;
+    private Vector2 velocity = new Vector2();
+    private float width;
+    private float height;
+
+    private float speed = MOVEMENT_SPEED; // Add at class level
+
+    private Rectangle bounds;
+    private TileCollision tileCollision;
+
+    private TiledMap tiledMap;
+
+    private Animation<TextureRegion> walkLeftAnimation;
+    private Animation<TextureRegion> walkRightAnimation;
+    private float stateTime = 0;
+    private boolean facingRight = true;
+
+    private static final float ANIMATION_FRAME_DURATION = 0.15f;  // Slower animation (was 0.1f)
+    private static final int FRAME_COUNT = 2;  // We have 2 frames per direction
+
+    public Player(Sprite sprite, float x, float y, World world, Game game, TiledMap tiledMap) {
         super(sprite);
         this.game = game;
         this.world = world;
-        setPosition(x, y);
-        createBodies(x, y);
+        this.tiledMap = tiledMap;
+        
+        // Initialize fields first
+        float width = sprite.getWidth();
+        float height = sprite.getHeight();
+        
+        // Initialize position in world coordinates
+        this.position = new Vector2(x / PPM, y / PPM);  // Convert to world units
+        this.velocity = new Vector2(0, 0);  // Ensure velocity is zero initially
+        
+        // Set up collision bounds
+        this.bounds = new Rectangle(
+            (x / PPM) - (width / (2 * PPM)),  // Center the bounds
+            (y / PPM) - (height / (2 * PPM)), 
+            width / PPM, 
+            height / PPM
+        );
+        
+        this.tileCollision = new TileCollision(tiledMap);
+        
         // Initialize animations
-        walkRight = createAnimation("sprites/WalkRight");
-        walkLeft = createAnimation("sprites/WalkLeft");
-        // HP & XP
+        initializeAnimations();
+        
+        // Set initial sprite position in screen coordinates
+        setPosition(x - width/2, y - height/2);
+        
+        // Initialize other components
         this.health = 100;
         this.maxHealth = 100;
         this.xp = 0;
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
-        // Shield
+        
         shieldActive = false;
         shieldTimeRemaining = 0;
         loadShieldAnimation();
-
-        // Initialize SkillManager
+        
         this.skillManager = new SkillManager(this, world);
-
-        // Get map dimensions
+        
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
+        
+       
     }
 
     public float getHealth() {
@@ -144,47 +186,11 @@ public class Player extends Sprite {
     }
 
     protected void createBodies(float x, float y) {
-        // Main body for ground physics (smaller, at feet)
-        BodyDef mainDef = new BodyDef();
-        mainDef.position.set(x / PPM, (y) / PPM );
-        mainDef.type = BodyDef.BodyType.DynamicBody;
-        mainBody = world.createBody(mainDef);
-        mainBody.setUserData(this);
-
-        PolygonShape mainShape = new PolygonShape();
-        mainShape.setAsBox(6 / PPM, 3 / PPM);  // Small box for feet
-        
-        FixtureDef mainFixture = new FixtureDef();
-        mainFixture.shape = mainShape;
-        mainFixture.filter.categoryBits = GameConfig.BIT_PLAYER;
-        mainFixture.filter.maskBits = GameConfig.BIT_GROUND;
-        mainBody.createFixture(mainFixture);
-        mainShape.dispose();
-
-        // Hit body for monster collisions (larger, covers whole player)
-        BodyDef hitDef = new BodyDef();
-        hitDef.position.set(x / PPM, (y + 12) / PPM);  // Offset upward from feet
-        hitDef.type = BodyDef.BodyType.DynamicBody;
-        hitBody = world.createBody(hitDef);
-        hitBody.setUserData(this);
-
-        PolygonShape hitShape = new PolygonShape();
-        hitShape.setAsBox(8 / PPM, 16 / PPM);  // Larger box for full body
-        
-        FixtureDef hitFixture = new FixtureDef();
-        hitFixture.shape = hitShape;
-        hitFixture.isSensor = true;  // No physical response
-        hitFixture.filter.categoryBits = GameConfig.BIT_PLAYER_SENSOR;
-        hitFixture.filter.maskBits = GameConfig.BIT_MONSTER;
-        hitBody.createFixture(hitFixture);
-        hitShape.dispose();
+        position = new Vector2(x, y);
+        velocity = new Vector2(0, 0);
+        bounds = new Rectangle(x, y, getWidth(), getHeight());
     }
 
-    // Update both bodies' positions
-    public void updateBodies() {
-        Vector2 pos = mainBody.getPosition();
-        hitBody.setTransform(pos.x, pos.y + 12/PPM, 0);  // Keep hit body above feet
-    }
 
     public void draw(SpriteBatch batch, OrthographicCamera camera) {
         if (isDead) {
@@ -224,8 +230,8 @@ public class Player extends Sprite {
         // Restore original color
         batch.setColor(oldColor);
         
-        float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
-        float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
+        float x = position.x * GameConfig.PPM - getWidth() / 2;
+        float y = position.y * GameConfig.PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
 
 
@@ -279,72 +285,54 @@ public class Player extends Sprite {
         return MOVEMENT_SPEED;
     }
 
-    public Body getBody() {
-        return mainBody;
+    public Vector2 getPosition() {
+        return new Vector2(position.x * PPM, position.y * PPM);
     }
 
-    public void drawDebug(ShapeRenderer shapeRenderer, OrthographicCamera camera) {
-        // Draw player collision boxes
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeType.Line);
-        
-        // Draw main body (feet) in blue
-        shapeRenderer.setColor(0, 0, 1, 1);
-        Vector2 mainPos = mainBody.getPosition();
-        shapeRenderer.rect(
-            mainPos.x * PPM - 6,  // 6 is half width from createBodies
-            mainPos.y * PPM - 3,  // 3 is half height from createBodies
-            12,                   // Full width
-            6                     // Full height
-        );
-        
-        // Draw hit body (full body) in red
-        shapeRenderer.setColor(1, 0, 0, 1);
-        Vector2 hitPos = hitBody.getPosition();
-        shapeRenderer.rect(
-            hitPos.x * PPM - 8,   // 8 is half width from createBodies
-            hitPos.y * PPM - 16,  // 16 is half height from createBodies
-            16,                   // Full width
-            32                    // Full height
-        );
-        
-        shapeRenderer.end();
-    }
+    
 
     // Add this method to limit maximum velocity
     public void update(float delta) {
-        // Add a maximum velocity limit
-        Vector2 velocity = mainBody.getLinearVelocity();
-        float maxVelocity = 5f; // Adjust this value as needed
-        if (velocity.len() > maxVelocity) {
-            velocity.nor().scl(maxVelocity);
-            mainBody.setLinearVelocity(velocity);
-        }
-        // Update sprite position to match physics body
-        setPosition(
-                mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2,
-                mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2);
-        // Shield
-//        if (shieldActive) {
-//            shieldTimeRemaining -= delta;
-//            if (shieldTimeRemaining <= 0) {
-//                shieldActive = false;
-//                shieldStateTime = 0;
-//            }
-//        }
+        if (isDead) return;
 
+        // Only update position if there's actual velocity
+        if (Math.abs(velocity.x) > 0.001f || Math.abs(velocity.y) > 0.001f) {
+            float oldX = position.x;
+            float oldY = position.y;
+            
+            // Test new position
+            Rectangle testBounds = new Rectangle(
+                position.x + velocity.x * delta,
+                position.y + velocity.y * delta,
+                width,
+                height
+            );
+
+            // Only update position if no collision would occur
+            if (!tileCollision.collidesWith(testBounds)) {
+                position.add(velocity.x * delta, velocity.y * delta);
+            } else {
+                position.x = oldX;
+                position.y = oldY;
+            }
+        }
+
+        // Update bounds and sprite position only once
+        float x = position.x * PPM - getWidth() / 2;
+        float y = position.y * PPM - getHeight() / 2;
+        setPosition(x, y);  // This updates both sprite and bounds positions
+        
+        // Remove any automatic position adjustments in draw method
+        bounds.setPosition(x, y);
+
+        updateAnimation(delta);
     }
 
     public void updateSkill(float delta){
         skillManager.update(delta);
     }
 
-    public void stop() {
-        // Stop the player's movement
-        if (mainBody != null) {
-            mainBody.setLinearVelocity(0, 0);
-        }
-    }
+    
 
 
 
@@ -370,13 +358,9 @@ public class Player extends Sprite {
     }
 
     public void stopMovement() {
-        mainBody.setLinearVelocity(0, 0);
+        velocity.set(0, 0);  // Set velocity to zero instead of using Box2D body
     }
 
-    public void resetMovement() {
-        // Reset any movement-related states if needed
-        mainBody.setLinearVelocity(0, 0);
-    }
 
     private void loadShieldAnimation() {
         // Load all shield frames into array
@@ -409,15 +393,6 @@ public class Player extends Sprite {
         }
     }
 
-    public void applyKnockback(Vector2 sourcePosition) {
-        if (!isKnockedBack) {
-            Vector2 knockbackDirection = mainBody.getPosition().cpy().sub(sourcePosition).nor();
-            mainBody.setLinearVelocity(knockbackDirection.scl(KNOCKBACK_FORCE));
-            isKnockedBack = true;
-            knockbackTimer = KNOCKBACK_DURATION;
-        }
-    }
-
 
     public boolean isKnockedBack() {
         return isKnockedBack;
@@ -433,8 +408,8 @@ public class Player extends Sprite {
         float cameraHalfHeight = camera.viewportHeight * camera.zoom / 2;
         
         // Get current player position
-        float x = mainBody.getPosition().x * PPM;
-        float y = mainBody.getPosition().y * PPM;
+        float x = position.x * PPM;
+        float y = position.y * PPM;
         
         // Calculate bounded camera position
         float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING), 
@@ -456,6 +431,116 @@ public class Player extends Sprite {
     public void setMapBounds(float width, float height) {
         this.mapWidth = width;
         this.mapHeight = height;
+    }
+
+    public void setVelocity(Vector2 vel) {
+        if (vel.len2() > 0) {
+            vel.nor().scl(MOVEMENT_SPEED);
+        }
+        velocity.set(vel.x / GameConfig.PPM, vel.y / GameConfig.PPM); // Scale velocity to match world units
+    }
+
+    public Rectangle getHitbox() {
+        return new Rectangle(
+            position.x - width/2,
+            position.y - height/2,
+            width,
+            height
+        );
+    }
+
+    public Rectangle getBounds() {
+        return bounds;
+    }
+
+    public Vector2 getVelocity() {
+        return velocity;
+    }
+
+    @Override
+    public void setPosition(float x, float y) {
+        super.setPosition(x, y);  // Update sprite position
+        if (bounds != null) {
+            bounds.setPosition(x, y); // Update collision bounds
+        }
+    }
+
+    private void initializeAnimations() {
+        // Load textures for walking animations
+        TextureRegion[] leftFrames = new TextureRegion[FRAME_COUNT];
+        TextureRegion[] rightFrames = new TextureRegion[FRAME_COUNT];
+        
+        // Load the individual frame textures
+        leftFrames[0] = new TextureRegion(new Texture("sprites/WalkLeft1.png"));
+        leftFrames[1] = new TextureRegion(new Texture("sprites/WalkLeft2.png"));
+        rightFrames[0] = new TextureRegion(new Texture("sprites/WalkRight1.png"));
+        rightFrames[1] = new TextureRegion(new Texture("sprites/WalkRight2.png"));
+        
+        // Create animations
+        walkLeftAnimation = new Animation<>(ANIMATION_FRAME_DURATION, leftFrames);
+        walkRightAnimation = new Animation<>(ANIMATION_FRAME_DURATION, rightFrames);
+        
+        // Set initial frame
+        setRegion(rightFrames[0]);  // Default to first right-facing frame
+    }
+
+    private void updateAnimation(float delta) {
+        stateTime += delta;
+        
+        // Update current animation based on movement
+        if (velocity.x > 0) {
+            facingRight = true;
+            setRegion(walkRightAnimation.getKeyFrame(stateTime, true));
+        } else if (velocity.x < 0) {
+            facingRight = false;
+            setRegion(walkLeftAnimation.getKeyFrame(stateTime, true));
+        } else {
+            // When idle, show first frame of current direction
+            setRegion(facingRight ? 
+                walkRightAnimation.getKeyFrame(0) : 
+                walkLeftAnimation.getKeyFrame(0));
+        }
+    }
+
+    
+    public void dispose() {
+        // Dispose of animation textures
+        if (walkLeftAnimation != null) {
+            for (TextureRegion frame : walkLeftAnimation.getKeyFrames()) {
+                frame.getTexture().dispose();
+            }
+        }
+        if (walkRightAnimation != null) {
+            for (TextureRegion frame : walkRightAnimation.getKeyFrames()) {
+                frame.getTexture().dispose();
+            }
+        }
+        // ... dispose other resources ...
+    }
+
+    public void resetMovement() {
+        velocity.set(0, 0);
+        stateTime = 0;
+    }
+
+    public void applyKnockback(Vector2 direction) {
+        isKnockedBack = true;
+        knockbackTimer = KNOCKBACK_DURATION;
+        velocity.set(direction.scl(KNOCKBACK_FORCE));
+    }
+
+    public void initCollision(TiledMap map) {
+        tileCollision = new TileCollision(map);
+    }
+
+    public void setWorldPosition(float x, float y) {
+        position.set(x / PPM, y / PPM);  // Store in world units
+        float screenX = x - getWidth()/2;
+        float screenY = y - getHeight()/2;
+        setPosition(screenX, screenY);
+        if (bounds != null) {
+            bounds.setPosition(screenX, screenY);
+        }
     }
 
 }

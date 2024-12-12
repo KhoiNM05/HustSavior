@@ -1,14 +1,13 @@
 package io.github.HustSavior.items;
 
 import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.physics.box2d.World;
 
 public class PhysicBook extends Item{
-    public PhysicBook(Sprite sprite, int x, int y, float PPM, World world){
-        super(sprite, x, y, PPM, world);
+    public PhysicBook(Sprite sprite, int x, int y) {
+        super(sprite, x, y);
         this.imagePath = "item/physic1.jpg";
         this.dialogMessage = "a Physics Book!\nTime to learn about forces";
-        this.id=3;
+        this.id = 3;
     }
 
 

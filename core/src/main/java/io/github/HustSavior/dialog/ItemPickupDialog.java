@@ -9,10 +9,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Disposable;
 
 import io.github.HustSavior.input.InputHandler;
 
-public class ItemPickupDialog extends BaseDialog {
+public class ItemPickupDialog extends BaseDialog implements Disposable {
     public ItemPickupDialog(Stage stage, Skin skin, InputHandler inputHandler) {
         super(stage, skin, inputHandler);
     }
@@ -74,6 +75,13 @@ public class ItemPickupDialog extends BaseDialog {
             );
 
             setupAutoClose(onClose);
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (dialog != null) {
+            dialog.remove();
         }
     }
 } 

@@ -10,8 +10,9 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Disposable;
 
-public class LowgroundManager {
+public class LowgroundManager implements Disposable {
     private static final float LOWGROUND_OFFSET_X = -5f;
     private static final float LOWGROUND_OFFSET_Y = -5f;
 
@@ -81,5 +82,10 @@ public class LowgroundManager {
 
     public boolean isInLowground() {
         return isInLowground;
+    }
+
+    @Override
+    public void dispose() {
+        // Clean up any resources if needed
     }
 } 
