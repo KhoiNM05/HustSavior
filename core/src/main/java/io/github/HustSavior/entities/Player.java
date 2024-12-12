@@ -108,10 +108,15 @@ public class Player extends Sprite {
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
-        // Initialize SkillManager
-        this.skillManager = new SkillManager(this, world);
-        //activate skill slash by default
+
+        // Shield
+//        shieldActive = false;
+//        shieldTimeRemaining = 0;
+//        loadShieldAnimation();
+        skillManager=new SkillManager(this, world);
         skillManager.activateSkills(1);
+
+
         // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
@@ -187,8 +192,66 @@ public class Player extends Sprite {
         super.draw(batch);
         float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
         float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
-        setPosition(x, y + 12);
+
+
+        setPosition(x, y + 12);  // Offset sprite up from feet position
         skillManager.drawSkills(batch);
+        if (isDead) {
+            deathTimer += Gdx.graphics.getDeltaTime();
+            TextureRegion currentFrame = deathAnimation.getKeyFrame(deathTimer, false);
+
+            if (deathAnimation.isAnimationFinished(deathTimer) && !startFading) {
+                startFading = true;
+                fadeTimer = 0;
+            }
+
+            if (startFading) {
+                fadeTimer += Gdx.graphics.getDeltaTime();
+                float alpha = Math.min(1, fadeTimer / FADE_DURATION);
+                batch.setColor(1, 1, 1, 1 - alpha); // Fade out player
+            }
+
+            batch.draw(currentFrame, getX(), getY());
+            batch.setColor(1, 1, 1, 1); // Reset batch color
+
+            if (startFading && fadeTimer >= FADE_DURATION) {
+                game.setScreen(new DeathScreen(game));
+            }
+            return;
+        }
+        Color oldColor = batch.getColor();
+        float finalAlpha = alpha;
+
+        // If shield is active, use shield alpha instead
+        if (shieldActive) {
+            finalAlpha = SHIELD_ALPHA;
+        }
+
+        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
+        batch.setColor(oldColor);
+
+//        if (shieldActive) {
+//            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
+//            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
+//            float shieldScale = 0.45f; // Adjust this value to change shield size
+//            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
+//            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
+//
+//            // Save current color
+//            oldColor = batch.getColor();
+//            // Set transparent color
+//            batch.setColor(1, 1, 1, SHIELD_ALPHA);
+//
+//            batch.draw(currentFrame,
+//                shieldX,
+//                shieldY,
+//                currentFrame.getRegionWidth() * shieldScale,
+//                currentFrame.getRegionHeight() * shieldScale);
+//
+//            // Restore original color
+//            batch.setColor(oldColor);
+//        }
+
 
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
@@ -271,6 +334,7 @@ public class Player extends Sprite {
 //                shieldStateTime = 0;
 //            }
 //        }
+        skillManager.update(delta);
 
     }
 
@@ -287,14 +351,23 @@ public class Player extends Sprite {
 
 
 
-    public void acquireEffect(int id){
-        switch(id){
-            case 1:
-            case 2: skillManager.applyBuff(id);
-                    break;
+
+    public void acquireEffect(int itemId) {
+//        // Skip skill activation if skillManager is null
+//        if (skillManager == null) {
+//            // Handle shield effect directly
+//            if (itemId == 5) { // Assuming 5 is the shield item ID
+//                // activateShield();
+//                skillManager.activateSkills(2);
+//                return;
+//            }
+//            return;
+//        }
+//        skillManager.activateSkills(itemId);
+        switch(itemId){
+            case 1: break;
             case 4: heal(50); break;
             case 5: skillManager.activateSkills(2); break;
-            default: ;
         }
 
     }
@@ -315,6 +388,7 @@ public class Player extends Sprite {
         // Reset any movement-related states if needed
         mainBody.setLinearVelocity(0, 0);
     }
+
 
     public void takeDamage(float damage) {
         if (!shieldActive) {
