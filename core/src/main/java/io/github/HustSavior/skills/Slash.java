@@ -59,6 +59,7 @@ public class Slash extends Sprite implements Skills{
 
     @Override
     public Animation<TextureRegion> createAnimation(){
+
         animation = new TextureRegion[3];
         animation[0] = new TextureRegion(new Texture("skills/Slash1.png"));
         animation[1] = new TextureRegion(new Texture("skills/Slash2.png"));
@@ -69,6 +70,7 @@ public class Slash extends Sprite implements Skills{
         //animation[6] = new TextureRegion(new Texture("skills/parabol7.png"));
 
         return new Animation<TextureRegion>(1/30f, animation);
+
     }
 
     @Override
@@ -151,9 +153,11 @@ public class Slash extends Sprite implements Skills{
         return cd.isReady();
     }
 
+
     public void dispose() {
         if (isSoundLoaded) {
             slashSound.dispose();
         }
+
     }
 }

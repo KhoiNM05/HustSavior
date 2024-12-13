@@ -233,6 +233,7 @@ public class Play implements Screen {
         }
     }
 
+
     public void handleSkillCollision(Contact contact) {
         Fixture fixtureA = contact.getFixtureA();
         Fixture fixtureB = contact.getFixtureB();
@@ -248,6 +249,7 @@ public class Play implements Screen {
             }
         }
     }
+
 
     private void loadItems() {
         assetSetter.createObject(500, 500, 1, PPM, world);
@@ -341,6 +343,8 @@ public class Play implements Screen {
         }
         updateCamera();
         bulletManager.update(delta);
+
+
         player.updateSkill(delta);
         updateMonsters(delta);
 

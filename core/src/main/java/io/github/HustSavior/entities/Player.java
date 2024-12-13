@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
@@ -107,12 +108,14 @@ public class Player extends Sprite {
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
+
         // Shield
 //        shieldActive = false;
 //        shieldTimeRemaining = 0;
 //        loadShieldAnimation();
         skillManager=new SkillManager(this, world);
         skillManager.activateSkills(1);
+
 
         // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
@@ -189,6 +192,8 @@ public class Player extends Sprite {
         super.draw(batch);
         float x = mainBody.getPosition().x * GameConfig.PPM - getWidth() / 2;
         float y = mainBody.getPosition().y * GameConfig.PPM - getHeight() / 2;
+
+
         setPosition(x, y + 12);  // Offset sprite up from feet position
         skillManager.drawSkills(batch);
         if (isDead) {
@@ -246,6 +251,7 @@ public class Player extends Sprite {
 //            // Restore original color
 //            batch.setColor(oldColor);
 //        }
+
 
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
@@ -345,6 +351,7 @@ public class Player extends Sprite {
 
 
 
+
     public void acquireEffect(int itemId) {
 //        // Skip skill activation if skillManager is null
 //        if (skillManager == null) {
@@ -362,6 +369,7 @@ public class Player extends Sprite {
             case 4: heal(50); break;
             case 5: skillManager.activateSkills(2); break;
         }
+
     }
 
     public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}
@@ -379,24 +387,6 @@ public class Player extends Sprite {
     public void resetMovement() {
         // Reset any movement-related states if needed
         mainBody.setLinearVelocity(0, 0);
-    }
-
-//    private void loadShieldAnimation() {
-//        // Load all shield frames into array
-//        shieldFrames = new TextureRegion[4];
-//        for (int i = 0; i < 4; i++) {
-//            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
-//            shieldFrames[i] = new TextureRegion(texture);
-//            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
-//        }
-//        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
-//        shieldStateTime = 0;
-//    }
-
-    public void activateShield() {
-        shieldActive = true;
-        shieldTimeRemaining = SHIELD_DURATION;
-        shieldStateTime = 0;
     }
 
 
