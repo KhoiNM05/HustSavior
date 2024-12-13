@@ -942,8 +942,8 @@ public class Play implements Screen {
             case 4: // HPPotion
                 player.heal(50);
                 break;
-            case 5: // Shield
-                player.activateShield();
+            case 5: // Shield and get Effect of Shield item
+                player.acquireEffect(5);
                 break;
         }
     }
