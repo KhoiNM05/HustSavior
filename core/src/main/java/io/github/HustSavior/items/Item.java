@@ -82,4 +82,11 @@ public abstract class Item implements Disposable {
     public float getY() {
         return bounds.y;
     }
+
+    public boolean checkCollision(Rectangle playerBounds) {
+        if (!collected && visible) {
+            return bounds.overlaps(playerBounds);
+        }
+        return false;
+    }
 }

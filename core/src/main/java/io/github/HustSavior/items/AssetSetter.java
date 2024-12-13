@@ -96,6 +96,15 @@ public class AssetSetter implements Disposable {
         }
     }
 
+    public Item checkCollisions(Rectangle playerBounds) {
+        for (Item item : objectList) {
+            if (item.checkCollision(playerBounds)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
     @Override
     public void dispose() {
         for (Item item : objectList) {

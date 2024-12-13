@@ -115,6 +115,8 @@ public class Player extends Sprite {
 
     private OrthographicCamera camera;  // Add at class level
 
+    private boolean slashActivated = false;  // Add this field
+
     public Player(Sprite sprite, float x, float y, World world, Game game, TiledMap tiledMap) {
         super(sprite);
         this.game = game;
@@ -146,19 +148,21 @@ public class Player extends Sprite {
         setPosition(x - width/2, y - height/2);
         
         // Initialize other components
-        this.health = 100;
-        this.maxHealth = 100;
+        this.health = 10000;
+        this.maxHealth = 10000;
         this.xp = 0;
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
         xpBarTexture = new Texture("HP & XP/xp_bar.png");
-        
-        shieldActive = false;
-        shieldTimeRemaining = 0;
-        loadShieldAnimation();
-        
-        this.skillManager = new SkillManager(this, world);
-        
+
+        // Shield
+//        shieldActive = false;
+//        shieldTimeRemaining = 0;
+//        loadShieldAnimation();
+        skillManager = new SkillManager(this, world);
+
+
+        // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
         
@@ -234,32 +238,29 @@ public class Player extends Sprite {
 
         batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
         batch.setColor(oldColor);
-        
-    
-        setPosition(x, y + 12);  // Offset sprite up from feet position
 
+//        if (shieldActive) {
+//            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
+//            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
+//            float shieldScale = 0.45f; // Adjust this value to change shield size
+//            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
+//            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
+//
+//            // Save current color
+//            oldColor = batch.getColor();
+//            // Set transparent color
+//            batch.setColor(1, 1, 1, SHIELD_ALPHA);
+//
+//            batch.draw(currentFrame,
+//                shieldX,
+//                shieldY,
+//                currentFrame.getRegionWidth() * shieldScale,
+//                currentFrame.getRegionHeight() * shieldScale);
+//
+//            // Restore original color
+//            batch.setColor(oldColor);
+//        }
 
-        if (shieldActive) {
-            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
-            TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
-            float shieldScale = 0.45f; // Adjust this value to change shield size
-            float shieldX = getX() - (currentFrame.getRegionWidth() * shieldScale - getWidth()) / 2;
-            float shieldY = getY() - (currentFrame.getRegionHeight() * shieldScale - getHeight()) / 2;
-
-            // Save current color
-            oldColor = batch.getColor();
-            // Set transparent color
-            batch.setColor(1, 1, 1, SHIELD_ALPHA);
-
-            batch.draw(currentFrame,
-                shieldX,
-                shieldY,
-                currentFrame.getRegionWidth() * shieldScale,
-                currentFrame.getRegionHeight() * shieldScale);
-
-            // Restore original color
-            batch.setColor(oldColor);
-        }
 
         // Player's HP
         float healthPercentage = getHealth() / getMaxHealth();
@@ -315,6 +316,15 @@ public class Player extends Sprite {
             return;
         }
 
+        // Auto-activate slash if not already activated
+        if (!slashActivated) {
+            skillManager.activateSkills(1);  // 1 is the MELEE skill ID
+            slashActivated = true;
+        }
+
+        // Update skills
+        skillManager.update(delta);
+
         // Only update position if there's actual velocity
         if (Math.abs(velocity.x) > 0.001f || Math.abs(velocity.y) > 0.001f) {
             float oldX = position.x;
@@ -356,6 +366,7 @@ public class Player extends Sprite {
 
 
 
+
     public void acquireEffect(int itemId) {
 //        // Skip skill activation if skillManager is null
 //        if (skillManager == null) {
@@ -373,6 +384,7 @@ public class Player extends Sprite {
             case 4: heal(50); break;
             case 5: skillManager.activateSkills(2); break;
         }
+
     }
 
     public void setFacingDirection(boolean facingLeft){this.facingLeft=facingLeft;}

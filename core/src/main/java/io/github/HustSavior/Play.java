@@ -305,6 +305,7 @@ public class Play implements Screen {
         }
     }
 
+
     public void handleSkillCollision(Contact contact) {
         Fixture fixtureA = contact.getFixtureA();
         Fixture fixtureB = contact.getFixtureB();
@@ -320,6 +321,7 @@ public class Play implements Screen {
             }
         }
     }
+
 
     private void loadItems() {
         assetSetter.createObject(500, 500, 1);
@@ -906,22 +908,43 @@ public class Play implements Screen {
                 // Set dialog active state
                 inputHandler.setDialogActive(true);
                 
+                // Handle specific item effects
+                handleItemEffect(item);
+                
                 // Show dialog with proper parameters
                 dialogManager.showItemPickupDialog(
-                    item.getDialogMessage(),  // Pass the message
-                    item.getImagePath(),      // Pass the image path
+                    item.getDialogMessage(),
+                    item.getImagePath(),
                     () -> {
                         // Callback when dialog is closed
                         item.setCollected(true);
-                        player.acquireEffect(item.getId());
                         assetSetter.objectAcquired(item);
                         inventoryTray.addItem(item.getImagePath());
                         inputHandler.setDialogActive(false);
                     }
                 );
-                // Break after showing dialog for first overlapping item
                 break;
             }
+        }
+    }
+
+    private void handleItemEffect(Item item) {
+        switch (item.getId()) {
+            case 1: // CalcBook
+                player.acquireEffect(1);
+                break;
+            case 2: // AlgebraBook
+                player.acquireEffect(2);
+                break;
+            case 3: // PhysicBook
+                player.acquireEffect(3);
+                break;
+            case 4: // HPPotion
+                player.heal(50);
+                break;
+            case 5: // Shield
+                player.activateShield();
+                break;
         }
     }
 
@@ -930,24 +953,7 @@ public class Play implements Screen {
     }
 
     
-
-
-   
-
-    
-
-
-    
+    public Array<AbstractMonster> getMonsters() {
+        return monsters;
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
