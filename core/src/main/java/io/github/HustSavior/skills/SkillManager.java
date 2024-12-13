@@ -23,7 +23,7 @@ public class SkillManager {
 
     public void activateSkills(int id){
         if (id==MELEE){
-            skillList.add(new Slash(new Sprite(new Texture("skills/Slash1.png")),player, world));
+            skillList.add(new Slash(new Sprite(new Texture("skills/Slash1.png")),player));
         }
         else if(id==SHIELD){
             skillList.add(new Shield(new Sprite(new Texture("item/shield.png")), player, world));
@@ -51,7 +51,7 @@ public class SkillManager {
             cooldownReduction(0.5f);
         }
         else if (id==2){
-            increaseAOE(2.0f);
+            increaseSkillSize(2.0f);
         }
     }
 
@@ -61,9 +61,10 @@ public class SkillManager {
         }
     }
 
-    private void increaseAOE(float scale){
+    private void increaseSkillSize(float scale){
         for (int i=0; i<skillList.size(); i++){
-            skillList.get(i).setAOE(scale);
+            if (skillList.get(i) instanceof Slash)
+            skillList.get(i).setImprovedSize(scale);
         }
     }
 }

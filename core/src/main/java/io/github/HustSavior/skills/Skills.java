@@ -13,12 +13,10 @@ public interface Skills {
 
     void update(float delta);
 
-    Body createHitbox(int x, int y, float PPM, World world);
-
     boolean isReady();
 
     CooldownController getCooldown();
 
-    void setAOE(float scale);
+    void setImprovedSize(float scale);
 
 }

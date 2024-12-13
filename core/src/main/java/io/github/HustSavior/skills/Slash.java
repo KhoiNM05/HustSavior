@@ -92,7 +92,7 @@ public class Slash extends Sprite implements Skills{
             castingX = player.getPosition().x;
             castingY = player.getPosition().y;
             slashBounds = new Rectangle(
-                castingX, 
+                castingX,
                 castingY,
                 getRegionWidth(),
                 getRegionHeight()
@@ -100,7 +100,7 @@ public class Slash extends Sprite implements Skills{
         }
 
         stateTime += delta;
-        
+
         // During active frames of animation
         if (stateTime < getAnimationTime && slashBounds != null) {
             // Get monsters from the world
@@ -132,12 +132,13 @@ public class Slash extends Sprite implements Skills{
     }
 
     @Override
-    public void setAOE(float aoe) {
-        // Implement AOE setting logic here
+    public void setImprovedSize(float scale) {
+        // increase hitbox size with scale
+        setSize(getRegionWidth()*scale, getRegionHeight()*scale);
     }
 
     @Override
     public CooldownController getCooldown() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return cd;
     }
 }

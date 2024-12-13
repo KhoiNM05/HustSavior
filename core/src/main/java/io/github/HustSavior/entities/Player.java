@@ -42,7 +42,7 @@ public class Player extends Sprite {
         new TextureRegion(new Texture("sprites/WalkRight1.png")),
         new TextureRegion(new Texture("sprites/WalkRight2.png"))
     );
-    
+
 
     private static boolean facingLeft;
 
@@ -122,31 +122,31 @@ public class Player extends Sprite {
         this.game = game;
         this.world = world;
         this.tiledMap = tiledMap;
-        
+
         // Initialize fields first
         float width = sprite.getWidth();
         float height = sprite.getHeight();
-        
+
         // Initialize position in world coordinates
         this.position = new Vector2(x / PPM, y / PPM);  // Convert to world units
         this.velocity = new Vector2(0, 0);  // Ensure velocity is zero initially
-        
+
         // Set up collision bounds
         this.bounds = new Rectangle(
             (x / PPM) - (width / (2 * PPM)),  // Center the bounds
-            (y / PPM) - (height / (2 * PPM)), 
-            width / PPM, 
+            (y / PPM) - (height / (2 * PPM)),
+            width / PPM,
             height / PPM
         );
-        
+
         this.tileCollision = new TileCollision(tiledMap);
-        
+
         // Initialize animations
         initializeAnimations();
-        
+
         // Set initial sprite position in screen coordinates
         setPosition(x - width/2, y - height/2);
-        
+
         // Initialize other components
         this.health = 10000;
         this.maxHealth = 10000;
@@ -165,7 +165,7 @@ public class Player extends Sprite {
         // Get map dimensions
         this.mapWidth = GameConfig.MAP_WIDTH;
         this.mapHeight = GameConfig.MAP_HEIGHT;
-        
+
         this.camera = new OrthographicCamera();
     }
 
@@ -203,7 +203,7 @@ public class Player extends Sprite {
         float x = position.x * PPM - getWidth() / 2;
         float y = position.y * PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
-        super.draw(batch); 
+        super.draw(batch);
         skillManager.drawSkills(batch);
         if (isDead) {
             deathTimer += Gdx.graphics.getDeltaTime();
@@ -294,7 +294,7 @@ public class Player extends Sprite {
         return new Vector2(position.x * PPM, position.y * PPM);
     }
 
-    
+
 
     // Add this method to limit maximum velocity
     public void update(float delta) {
@@ -329,7 +329,7 @@ public class Player extends Sprite {
         if (Math.abs(velocity.x) > 0.001f || Math.abs(velocity.y) > 0.001f) {
             float oldX = position.x;
             float oldY = position.y;
-            
+
             // Test new position
             Rectangle testBounds = new Rectangle(
                 position.x + velocity.x * delta,
@@ -351,19 +351,12 @@ public class Player extends Sprite {
         float x = position.x * PPM - getWidth() / 2;
         float y = position.y * PPM - getHeight() / 2;
         setPosition(x, y);  // This updates both sprite and bounds positions
-        
+
         // Remove any automatic position adjustments in draw method
         bounds.setPosition(x, y);
 
         updateAnimation(delta);
     }
-
-    public void updateSkill(float delta){
-        skillManager.update(delta);
-    }
-
-    
-
 
 
 
@@ -380,7 +373,8 @@ public class Player extends Sprite {
 //        }
 //        skillManager.activateSkills(itemId);
         switch(itemId){
-            case 1: break;
+            case 1:;
+            case 2: skillManager.applyBuff(itemId); break;
             case 4: heal(50); break;
             case 5: skillManager.activateSkills(2); break;
         }
@@ -447,7 +441,7 @@ public class Player extends Sprite {
         // Get current player position
         float x = position.x * PPM;
         float y = position.y * PPM;
-        
+
         // Calculate bounded camera position
         float boundedX = Math.min(Math.max(x, cameraHalfWidth - CAMERA_PADDING),
                                 mapWidth - cameraHalfWidth + CAMERA_PADDING);
@@ -506,24 +500,24 @@ public class Player extends Sprite {
         // Load textures for walking animations
         TextureRegion[] leftFrames = new TextureRegion[FRAME_COUNT];
         TextureRegion[] rightFrames = new TextureRegion[FRAME_COUNT];
-        
+
         // Load the individual frame textures
         leftFrames[0] = new TextureRegion(new Texture("sprites/WalkLeft1.png"));
         leftFrames[1] = new TextureRegion(new Texture("sprites/WalkLeft2.png"));
         rightFrames[0] = new TextureRegion(new Texture("sprites/WalkRight1.png"));
         rightFrames[1] = new TextureRegion(new Texture("sprites/WalkRight2.png"));
-        
+
         // Create animations
         walkLeftAnimation = new Animation<>(ANIMATION_FRAME_DURATION, leftFrames);
         walkRightAnimation = new Animation<>(ANIMATION_FRAME_DURATION, rightFrames);
-        
+
         // Set initial frame
         setRegion(rightFrames[0]);  // Default to first right-facing frame
     }
 
     private void updateAnimation(float delta) {
         stateTime += delta;
-        
+
         // Update current animation based on movement
         if (velocity.x > 0) {
             facingRight = true;
@@ -533,13 +527,13 @@ public class Player extends Sprite {
             setRegion(walkLeftAnimation.getKeyFrame(stateTime, true));
         } else {
             // When idle, show first frame of current direction
-            setRegion(facingRight ? 
-                walkRightAnimation.getKeyFrame(0) : 
+            setRegion(facingRight ?
+                walkRightAnimation.getKeyFrame(0) :
                 walkLeftAnimation.getKeyFrame(0));
         }
     }
 
-    
+
     public void dispose() {
         // Dispose of animation textures
         if (walkLeftAnimation != null) {
@@ -584,4 +578,7 @@ public class Player extends Sprite {
         this.camera = camera;
     }
 
+    public Object getScreen() {
+        return game.getScreen();
+    }
 }
