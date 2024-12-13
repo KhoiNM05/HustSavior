@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 
 import io.github.HustSavior.entities.Player;
 import io.github.HustSavior.entities.AbstractMonster;
+import io.github.HustSavior.Play;
 
 import java.util.ArrayList;
 
@@ -36,7 +37,7 @@ public class SkillManager {
 
     public void activateSkills(int id){
         if (id==MELEE){
-            skillList.add(new Slash(new Sprite(new Texture("skills/Slash1.png")),player, monsters));
+            skillList.add(new Slash(new Sprite(new Texture("skills/Slash1.png")), player, monsters));
         }
         else if(id==SHIELD){
             skillList.add(new Shield(new Sprite(new Texture("item/shield.png")), player, world));
@@ -45,16 +46,30 @@ public class SkillManager {
     }
 
     public void update(float delta){
-        for (int i=0; i<skillList.size(); i++){
-                skillList.get(i).update(delta);
+        // Update monsters reference from Play screen
+        Play playScreen = (Play)player.getScreen();
+        if (playScreen != null) {
+            this.monsters = playScreen.getMonsters();
+            // Update monsters reference in all skills
+            for (Skills skill : skillList) {
+                if (skill instanceof Slash) {
+                    ((Slash) skill).updateMonsters(monsters);
+                }
+            }
+        }
 
+        // Update skills
+        for (Skills skill : skillList) {
+            skill.update(delta);
         }
     }
 
-    public void drawSkills(SpriteBatch batch){
-        for (int i=0; i<skillList.size(); i++){
-            if (skillList.get(i).isReady()){
-                skillList.get(i).draw(batch);
+    public void drawSkills(SpriteBatch batch) {
+        for (Skills skill : skillList) {
+            if (skill instanceof Slash) {
+                ((Slash) skill).draw(batch);
+            } else if (skill instanceof Shield) {
+                ((Shield) skill).draw(batch);
             }
         }
     }
@@ -64,7 +79,7 @@ public class SkillManager {
             cooldownReduction(0.5f);
         }
         else if (id==2){
-            increaseAOE(2.0f);
+            increaseSkillSize(2.0f);
         }
     }
 
@@ -74,9 +89,10 @@ public class SkillManager {
         }
     }
 
-    private void increaseAOE(float scale){
+    private void increaseSkillSize(float scale){
         for (int i=0; i<skillList.size(); i++){
-            skillList.get(i).setAOE(scale);
+            if (skillList.get(i) instanceof Slash)
+            skillList.get(i).setImprovedSize(scale);
         }
     }
 

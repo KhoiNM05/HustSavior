@@ -1,7 +1,6 @@
 package io.github.HustSavior.skills;
 
 import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public interface Skills {
@@ -10,12 +9,10 @@ public interface Skills {
 
     void update(float delta);
 
-    void setAOE(float aoe);
+    boolean isReady();
 
     CooldownController getCooldown();
 
-    boolean isReady();
-
-    void draw(SpriteBatch batch);
+    void setImprovedSize(float scale);
 
 }

@@ -57,7 +57,7 @@ public class Shield extends Sprite implements Skills{
         shieldStateTime = 0;
         return animation;
     }
-    @Override
+   
     public void draw(SpriteBatch batch){
         shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
         TextureRegion currentFrame = shieldAnimation.getKeyFrame(shieldStateTime, true);
@@ -126,7 +126,6 @@ public class Shield extends Sprite implements Skills{
 
     public CooldownController getCooldown(){return cd;}
 
-    public void setAOE(float scale){
-        setSize(getRegionWidth()*scale, getRegionHeight()*scale);
+    public void setImprovedSize(float scale){
     }
 }

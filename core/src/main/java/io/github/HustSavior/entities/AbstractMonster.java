@@ -168,20 +168,20 @@ public abstract class AbstractMonster {
     
     public void takeDamage(float damage) {
         if (!isAlive()) return;
-        
+    
         // Apply damage
         hp -= damage;
         Gdx.app.log("Monster", "Taking damage: " + damage + ", HP remaining: " + hp);
-        
+    
         // Handle state changes
         if (hp <= 0) {
             hp = 0;
             handleDeath();
-        } else {
+        } else if (currentState != MonsterState.DEATH) {
             // Enter hit state and apply knockback
             changeState(MonsterState.TAKE_HIT);
             stateTime = 0;
-            
+    
             // Apply knockback away from player
             Vector2 knockbackDir = new Vector2(
                 position.x - player.getPosition().x,
@@ -373,10 +373,8 @@ public abstract class AbstractMonster {
    
     protected void updateAnimation(float delta) {
         stateTime += delta;
-        
+    
         if (currentState == MonsterState.ATTACKING) {
-            
-            
             if (stateTime >= attack1Animation.getAnimationDuration()) {
                 isFinishingAttack = false;
                 changeState(MonsterState.RUNNING);
@@ -384,10 +382,14 @@ public abstract class AbstractMonster {
                 attackTimer = ATTACK_COOLDOWN;
             }
         }
-        
-        if (currentState == MonsterState.TAKE_HIT && 
-            takeHitAnimation.isAnimationFinished(stateTime)) {
-            currentState = MonsterState.IDLE;
+    
+        if (currentState == MonsterState.TAKE_HIT && takeHitAnimation.isAnimationFinished(stateTime)) {
+            changeState(MonsterState.IDLE);
+        }
+    
+        if (currentState == MonsterState.DEATH && deathAnimation.isAnimationFinished(stateTime)) {
+            // Remove monster from screen and return to pool
+            removeFromScreen();
         }
     }
     
@@ -472,18 +474,15 @@ public abstract class AbstractMonster {
     }
 
     protected void handleDeath() {
-        if (currentState != MonsterState.DEATH) {
-            changeState(MonsterState.DEATH);
-            velocity.setZero();
-            stateTime = 0;
-        }
-        
-        // Check if death animation is finished
-        if (deathAnimation != null && deathAnimation.isAnimationFinished(stateTime)) {
-            // Mark for removal
-            setVisible(false);
-            dispose();
-        }
+        changeState(MonsterState.DEATH);
+        stateTime = 0;
     }
 
-} 
+    protected void removeFromScreen() {
+        // Implement logic to remove monster from screen and return to pool
+        // This could involve setting a flag or calling a method in the MonsterPool class
+        // For example:
+        MonsterPool.getInstance().free(this);
+    }
+
+}

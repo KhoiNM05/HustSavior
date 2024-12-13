@@ -119,7 +119,7 @@ public class Play implements Screen {
     private long lastGCCheck = 0; // Add this field as well
     private long lastPerformanceLog = 0;
     private long lastCleanupTime = 0;
-    
+
     private final Game game;
 
     private CollisionHandler collisionHandler;
@@ -134,7 +134,7 @@ public class Play implements Screen {
         long bulletTime;
         long itemTime;
         long physicsUpdateTime;
-        
+
         void reset() {
             physicsTime = inputTime = cameraTime = positionTime = bulletTime = itemTime = physicsUpdateTime = 0;
         }
@@ -163,16 +163,16 @@ public class Play implements Screen {
     public Play(Game game) {
         this.game = game;
         this.batch = new SpriteBatch();
-        
+
         // Initialize core components
         camera = new OrthographicCamera();
         viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
-        
+
         // Initialize world and map
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
         gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
-        
+
         // Initialize player
         player = new Player(
             new Sprite(new Texture("sprites/WalkRight1.png")),
@@ -183,10 +183,10 @@ public class Play implements Screen {
             gameMap.getTiledMap()
         );
         player.setCamera(camera);
-        
+
         // Initialize bullet manager
         bulletManager = new BulletManager(player, new ArrayList<>(), gameMap.getTiledMap());
-        
+
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
@@ -194,7 +194,7 @@ public class Play implements Screen {
         camera.position.set(500f, 150f, 0f);
         camera.zoom = 0.5f;
         camera.update();
-        
+
         // Force viewport update immediately
         viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 
@@ -266,7 +266,7 @@ public class Play implements Screen {
 
         // Add tree transparency manager initialization
         treeTransparencyManager = new TreeTransparencyManager(
-            world, 
+            world,
             gameMap.getTiledMap()
         );
 
@@ -337,15 +337,15 @@ public class Play implements Screen {
         // Initialize basic components
         world = setupWorld();
         collisionBodyFactory = new CollisionBodyFactory(world, PPM);
-        
-        
+
+
         // Force camera position reset
         camera.position.set(500f, 150f, 0f);
         camera.zoom = 0.5f;
         camera.update();
-        
+
         viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
-        
+
         Gdx.app.log("Play", "Show method - Camera position reset to: " + camera.position);
 
         // Initialize music player
@@ -366,13 +366,13 @@ public class Play implements Screen {
     @Override
     public void render(float delta) {
         if (isDisposed) return;
-        
+
         if (isGameOver) {
             player.update(delta);
-            
+
             Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-            
+
             batch.begin();
             player.draw(batch);
             batch.end();
@@ -391,25 +391,25 @@ public class Play implements Screen {
                     for (int i = 0; i < monsters.size; i++) {
                         AbstractMonster monster = monsters.get(i);
                         if (monster != null) {
-                            
-                            
+
+
                             monster.update(delta, player);
-                            
-                            
+
+
                         } else {
                             Gdx.app.debug("Play", "Monster[" + i + "] is null!");
                         }
                     }
-                }           
+                }
                 // Debug spawn system
                 spawnTimer += delta;
                 if (spawnTimer >= SPAWN_INTERVAL) {
-                    
+
                     monsterSpawnManager.update(delta);  // Make sure this is called
                     spawnTimer = 0;
-                    
+
                    // Debug monster count after spawn attempt
-                    
+
                 }
 
                 // Single update location for monsters
@@ -418,15 +418,15 @@ public class Play implements Screen {
                         monster.update(delta, player);
                     }
                 }
-                
+
                 // Other updates
-               
+
             }
 
             camera.update();
-            
+
             drawGame();
-            
+
             checkCollisions();
             dialogManager.update(delta);
 
@@ -440,15 +440,15 @@ public class Play implements Screen {
             }
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
             shapeRenderer.setProjectionMatrix(camera.combined);
-            
+
             // Render collision bounds
             tileCollision.renderDebug(shapeRenderer);
-            
+
             // Render monster bounds
             for (AbstractMonster monster : monsters) {
                 monster.renderDebug(shapeRenderer);
             }
-            
+
             shapeRenderer.end();
         }
     }
@@ -464,7 +464,7 @@ public class Play implements Screen {
         );
     }
 
-   
+
     private void updateGame(float delta) {
         float frameTime = Math.min(delta, MAX_FRAME_TIME);
         accumulator += frameTime;
@@ -490,13 +490,13 @@ public class Play implements Screen {
         // // Debug transparency state
         // if (gameMap != null && gameMap.getTiledMap() != null) {
         //     for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
-        //         if (layer.getName().equals("D3") || 
-        //             layer.getName().equals("D5") || 
-        //             layer.getName().equals("D35") || 
-        //             layer.getName().equals("Library") || 
-        //             layer.getName().equals("Roof") || 
+        //         if (layer.getName().equals("D3") ||
+        //             layer.getName().equals("D5") ||
+        //             layer.getName().equals("D35") ||
+        //             layer.getName().equals("Library") ||
+        //             layer.getName().equals("Roof") ||
         //             layer.getName().equals("Parking")) {
-                    
+
         //             Gdx.app.debug("Play", String.format(
         //                 "Layer %s opacity: %.2f",
         //                 layer.getName(),
@@ -540,9 +540,9 @@ public class Play implements Screen {
             float viewportHalfHeight = (camera.viewportHeight * camera.zoom) / 2;
             float margin = 100f;
 
-            camera.position.x = Math.max(viewportHalfWidth + margin, 
+            camera.position.x = Math.max(viewportHalfWidth + margin,
                 Math.min(mapBounds.width - viewportHalfWidth - margin, camera.position.x));
-            camera.position.y = Math.max(viewportHalfHeight + margin, 
+            camera.position.y = Math.max(viewportHalfHeight + margin,
                 Math.min(mapBounds.height - viewportHalfHeight - margin, camera.position.y));
         }
 
@@ -556,7 +556,7 @@ public class Play implements Screen {
         if (renderer == null) return;
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        renderer.setView(camera); 
+        renderer.setView(camera);
         // Get camera frustum for culling
         float w = camera.viewportWidth * camera.zoom;
         float h = camera.viewportHeight * camera.zoom;
@@ -568,7 +568,7 @@ public class Play implements Screen {
         );
         // Render first 3 layers
         int[] firstLayers = {0, 1, 2};
-        renderer.render(firstLayers);        
+        renderer.render(firstLayers);
         // Draw monsters and player
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
@@ -579,11 +579,11 @@ public class Play implements Screen {
                 }
             }
         }
-        
+
         if (bulletManager != null) {
             bulletManager.render(batch, viewBounds);
         }
-        batch.end();    
+        batch.end();
         if (buildingTransparencyManager != null && player != null) {
             buildingTransparencyManager.update(player.getPosition());
         }
@@ -597,10 +597,10 @@ public class Play implements Screen {
                 remainingLayers[i - 3] = i;
             }
             renderer.render(remainingLayers);
-        }   
+        }
         // Draw other game objects
         batch.begin();
-        
+
         if (assetSetter != null) {
             assetSetter.drawVisibleObjects(batch, viewBounds);
         }
@@ -608,7 +608,7 @@ public class Play implements Screen {
             player.draw(batch);
         }
         batch.end();
-     
+
     }
 
     private boolean isInView(float x, float y, Rectangle viewBounds) {
@@ -683,9 +683,9 @@ public class Play implements Screen {
         // Update viewport while maintaining camera position
         float oldX = camera.position.x;
         float oldY = camera.position.y;
-        
+
         viewport.update(width, height, false);
-        
+
         // Restore camera position
         camera.position.set(oldX, oldY, 0);
         camera.update();
@@ -726,7 +726,7 @@ public class Play implements Screen {
 
         MapLayer warningsLayer = gameMap.getTiledMap().getLayers().get("warnings");
         if (warningsLayer == null) {
-            
+
             return;
         }
 
@@ -739,7 +739,7 @@ public class Play implements Screen {
         Vector2 playerPos = player.getPosition();
         float playerX = playerPos.x;
         float playerY = playerPos.y;
-        
+
         // Create player bounds rectangle
         Rectangle playerRect = new Rectangle(
             playerX - player.getWidth() / 2,
@@ -752,9 +752,9 @@ public class Play implements Screen {
         for (MapObject object : warningsLayer.getObjects()) {
             if (object instanceof RectangleMapObject) {
                 Rectangle rect = ((RectangleMapObject) object).getRectangle();
-                
-                
-                
+
+
+
                 if (playerRect.overlaps(rect)) {
                     player.stopMovement();
                     // Make sure dialog is shown on the UI thread
@@ -792,11 +792,6 @@ public class Play implements Screen {
                 fixture.setSensor(true);
                 player.acquireEffect(item.getId());
                 assetSetter.objectAcquired(item);
-                if (item instanceof HPPotion) {
-                    player.heal(50);
-                } else if (item instanceof Shield) {
-                    player.activateShield();
-                }
                 inventoryTray.addItem(item.getImagePath());
                 inputHandler.setDialogActive(false);
             });
@@ -846,27 +841,27 @@ public class Play implements Screen {
     }
 
     private void update(float delta) {
-        if (isDisposed || gameMap == null) return;      
+        if (isDisposed || gameMap == null) return;
         if (!isPaused) {
             // Update player
             if (player != null) {
                 player.update(delta);
-                
+
                 // Get player position once
-               
-            }          
-            updateCamera();           
+
+            }
+            updateCamera();
             if (bulletManager != null) {
                 bulletManager.update(delta);
             }
             if (monsterSpawnManager != null) {
                 monsterSpawnManager.update(delta);
-            }           
+            }
             if (gameMap.getTiledMap() != null) {
                 MapLayer collisionLayer = gameMap.getTiledMap().getLayers().get("collisions");
                 if (collisionLayer != null) {
                     // Debug collision layer
-                    
+
                     for (MapObject object : collisionLayer.getObjects()) {
                         if (object instanceof RectangleMapObject) {
                             Rectangle rect = ((RectangleMapObject) object).getRectangle();
@@ -880,26 +875,26 @@ public class Play implements Screen {
                     }
                 } else {
                     Gdx.app.debug("Play", "No collision layer found!");
-                }               
+                }
                 checkItemPickup();
-                updateCamera();               
+                updateCamera();
                 if (!isPaused) {
-            
+
                     for (AbstractMonster monster : monsters) {
                         monster.update(delta, player);
                     }
-                }       
-               
+                }
+
                 // Periodic garbage collection
                 cleanupTimer += delta;
                 if (cleanupTimer >= CLEANUP_INTERVAL) {
                     cleanupUnusedResources();
                     cleanupTimer = 0;
-                }                            
+                }
             }
         }
     }
-    
+
     private void checkItemPickup() {
         if (gameMap == null) return;
 
@@ -908,10 +903,10 @@ public class Play implements Screen {
             if (!item.isCollected() && item.isVisible() && playerBounds.overlaps(item.getBounds())) {
                 // Set dialog active state
                 inputHandler.setDialogActive(true);
-                
+
                 // Handle specific item effects
                 handleItemEffect(item);
-                
+
                 // Show dialog with proper parameters
                 dialogManager.showItemPickupDialog(
                     item.getDialogMessage(),
@@ -943,8 +938,8 @@ public class Play implements Screen {
             case 4: // HPPotion
                 player.heal(50);
                 break;
-            case 5: // Shield
-                player.activateShield();
+            case 5: // Shield and get Effect of Shield item
+                player.acquireEffect(5);
                 break;
         }
     }
@@ -953,8 +948,10 @@ public class Play implements Screen {
         isGameOver = true;
     }
 
-    
+
     public Array<AbstractMonster> getMonsters() {
         return monsters;
     }
+
+    public Screen getScreen(){return game.getScreen();}
 }

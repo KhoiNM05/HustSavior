@@ -2,7 +2,7 @@ package io.github.HustSavior.skills;
 
 public class CooldownController {
 
-    private static float cooldown;
+    private float cooldown;
     private float timer;
     public CooldownController(float defaultCooldown){
         this.cooldown=defaultCooldown;
@@ -23,5 +23,13 @@ public class CooldownController {
 
     void setCooldown(float scale){
         cooldown*=scale;
+    }
+
+    public float getCurrentTimer() {
+        return timer;
+    }
+
+    public float getCooldownValue() {
+        return cooldown;
     }
 }

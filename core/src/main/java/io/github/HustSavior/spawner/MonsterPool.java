@@ -83,15 +83,30 @@ public class MonsterPool {
     public void resetMonster(AbstractMonster monster, float x, float y) {
         monster.setPosition(x, y);
         monster.setVelocity(0, 0);
+        monster.changeState(MonsterState.IDLE);
+        monster.setHp(monster.getMaxHp()); // Reset HP to max
     }
 
     public AbstractMonster obtain(int monsterType, float x, float y) {
+        AbstractMonster monster;
         switch (monsterType) {
-            case 0: return new Skeleton(x, y, player );
-            case 1: return new FlyingEye(x, y, player);
-            case 2: return new Mushroom(x, y, player);
-            case 3: return new Goblin(x, y, player);
-            default: return new Skeleton(x, y, player);
+            case 0: 
+                monster = skeletonPool.obtain();
+                break;
+            case 1: 
+                monster = flyingEyePool.obtain();
+                break;
+            case 2: 
+                monster = mushroomPool.obtain();
+                break;
+            case 3: 
+                monster = goblinPool.obtain();
+                break;
+            default: 
+                monster = skeletonPool.obtain();
+                break;
         }
+        resetMonster(monster, x, y);
+        return monster;
     }
-} 
+}
