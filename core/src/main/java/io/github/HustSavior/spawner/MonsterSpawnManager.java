@@ -12,31 +12,83 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
 import io.github.HustSavior.entities.AbstractMonster;
+import io.github.HustSavior.entities.FlyingEye;
+import io.github.HustSavior.entities.Goblin;
+import io.github.HustSavior.entities.Mushroom;
 import io.github.HustSavior.entities.Player;
+import io.github.HustSavior.entities.Skeleton;
+
 import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class MonsterSpawnManager {
     private final Player player;
     private final Array<AbstractMonster> monsters;
-    private float spawnTimer = 0;
-    private static final float BASE_SPAWN_INTERVAL = 5f;
-    private float currentSpawnInterval = BASE_SPAWN_INTERVAL;
-    private static final float MIN_SPAWN_INTERVAL = 2f;
-    private static final float MAX_SPAWN_INTERVAL = 10f;
-    private int spawnCount = 2;
-    private static final int MAX_MONSTERS = 50;
     private final Camera camera;
-    private static final float MIN_SPAWN_DISTANCE = 200f;
-    private static final float MAX_SPAWN_DISTANCE = 400f;
     private final Array<Rectangle> spawnAreas = new Array<>();
-    private final MonsterPool monsterPool;
+    private static final int MAX_MONSTERS = 50;
+    private static final float MIN_SPAWN_DISTANCE = 2000f;
+    private static final float MAX_SPAWN_DISTANCE = 5000f;
 
-    public MonsterSpawnManager(Player player, Array<AbstractMonster> monsters, Camera camera, TiledMap map, MonsterPool monsterPool) {
+    public MonsterSpawnManager(Player player, Array<AbstractMonster> monsters, Camera camera, TiledMap map) {
         this.player = player;
         this.monsters = monsters;
         this.camera = camera;
-        this.monsterPool = monsterPool;
         loadSpawnAreas(map);
+    }
+
+    public void update(float delta) {
+        // Only keep this if you need periodic spawning
+        if (monsters.size < MAX_MONSTERS) {
+            trySpawnMonster();
+        }
+    }
+
+    public void trySpawnMonster() {
+        System.out.println("Attempting to spawn monster...");
+        if (monsters.size >= MAX_MONSTERS) {
+            System.out.println("Max monsters reached: " + monsters.size);
+            return;
+        }
+        
+        if (spawnAreas.isEmpty()) {
+            System.out.println("No spawn areas available!");
+            return;
+        }
+        
+        Rectangle spawnArea = spawnAreas.random();
+        float x = spawnArea.x + MathUtils.random(spawnArea.width);
+        float y = spawnArea.y + MathUtils.random(spawnArea.height);
+        
+       
+        
+        if (!isValidSpawnPosition(x, y)) {
+            Gdx.app.debug("Spawn", "Invalid spawn position");
+            return;
+        }
+        
+        if (!isPositionClear(x, y)) {
+            Gdx.app.debug("Spawn", "Position not clear");
+            return;
+        }
+        
+        AbstractMonster monster = createMonster(x, y);
+        if (monster != null) {
+            monsters.add(monster);
+         
+        } else {
+            Gdx.app.error("Spawn", "Failed to create monster");
+        }
+    }
+
+    public AbstractMonster createMonster(float x, float y) {
+        int type = MathUtils.random(3);
+        switch (type) {
+            case 0: return new Skeleton(x, y, player);
+            case 1: return new FlyingEye(x, y, player);
+            case 2: return new Mushroom(x, y, player);
+            case 3: return new Goblin(x, y, player);
+            default: return new Skeleton(x, y, player);
+        }
     }
 
     private void loadSpawnAreas(TiledMap map) {
@@ -54,82 +106,26 @@ public class MonsterSpawnManager {
             }
         }
         
-      
-    }
-
-    public void setSpawnRate(float multiplier) {
-        currentSpawnInterval = MathUtils.clamp(
-            BASE_SPAWN_INTERVAL / multiplier,
-            MIN_SPAWN_INTERVAL,
-            MAX_SPAWN_INTERVAL
-        );
-     
-    }
-
-    public void setSpawnCount(int count) {
-        this.spawnCount = MathUtils.clamp(count, 1, 5);
-        
-    }
-
-    public void update(float delta) {
-        if (monsters.size < MAX_MONSTERS) {
-            Gdx.app.debug("Spawn", String.format(
-                "Spawning monsters. Current count: %d, Max: %d",
-                monsters.size,
-                MAX_MONSTERS
-            ));
-            spawnMonsters(spawnCount);
-        }
-    }
-
-    private void spawnMonsters(int count) {
-        if (spawnAreas.isEmpty()) {
-            Gdx.app.error("Spawn", "Cannot spawn - no spawn areas defined!");
-            return;
-        }
-
-        for (int i = 0; i < count; i++) {
-            Rectangle spawnArea = spawnAreas.random();
-            float x = spawnArea.x + MathUtils.random(spawnArea.width);
-            float y = spawnArea.y + MathUtils.random(spawnArea.height);
-
-          
-
-            int monsterType = MathUtils.random(3);
-            AbstractMonster monster = monsterPool.obtain(monsterType, x, y);
-            
-            if (monster != null) {
-                monsterPool.resetMonster(monster, x, y);
-                monsters.add(monster);
-            }
-        }
+        System.out.println("Loaded spawn areas: " + spawnAreas.size);
     }
 
     private boolean isValidSpawnPosition(float x, float y) {
-        // Calculate camera bounds with some padding in screen units
-        float padding = 32f;
-        float cameraLeft = camera.position.x * PPM - camera.viewportWidth/2 - padding;
-        float cameraRight = camera.position.x * PPM + camera.viewportWidth/2 + padding;
-        float cameraBottom = camera.position.y * PPM - camera.viewportHeight/2 - padding;
-        float cameraTop = camera.position.y * PPM + camera.viewportHeight/2 + padding;
-
-        // Debug spawn position attempt
-        Gdx.app.debug("Spawn", String.format(
-            "Trying spawn at (%.1f, %.1f)", x, y
-        ));
-
-        // Check if position is too close to camera view
-        if (x >= cameraLeft && x <= cameraRight && y >= cameraBottom && y <= cameraTop) {
-            return false;
-        }
-
         Vector2 playerPos = player.getPosition();
-        float playerX = playerPos.x * PPM;  // Convert to screen units
-        float playerY = playerPos.y * PPM;  // Convert to screen units
-        float distance = Vector2.dst(playerX, playerY, x, y);
+        // Convert everything to world units (divide by PPM)
+        float playerX = playerPos.x;  // Already in world units
+        float playerY = playerPos.y;  // Already in world units
+        float spawnX = x ;       // Convert spawn position to world units
+        float spawnY = y ;       // Convert spawn position to world units
         
-        // Check distance in screen units
-        if (distance < MIN_SPAWN_DISTANCE || distance > MAX_SPAWN_DISTANCE) {
+        float distance = Vector2.dst(playerX, playerY, spawnX, spawnY);
+
+        
+        // Convert spawn distance limits to world units
+        float minDistance = MIN_SPAWN_DISTANCE ;
+        float maxDistance = MAX_SPAWN_DISTANCE ;
+        
+        if (distance < minDistance || distance > maxDistance) {
+       
             return false;
         }
 
@@ -148,5 +144,13 @@ public class MonsterSpawnManager {
         }
         
         return true;
+    }
+
+    public Vector2 getRandomSpawnPoint() {
+        if (spawnAreas.isEmpty()) return null;
+        Rectangle spawnArea = spawnAreas.random();
+        float x = spawnArea.x + MathUtils.random(spawnArea.width);
+        float y = spawnArea.y + MathUtils.random(spawnArea.height);
+        return isValidSpawnPosition(x, y) ? new Vector2(x, y) : null;
     }
 } 

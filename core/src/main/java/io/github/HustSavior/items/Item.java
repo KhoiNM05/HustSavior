@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Disposable;
 
+import io.github.HustSavior.entities.Player;
+
 public abstract class Item implements Disposable {
     protected Rectangle bounds;
     protected Sprite sprite;
@@ -13,6 +15,10 @@ public abstract class Item implements Disposable {
     protected String dialogMessage;
     private boolean visible = true;
     int id;
+    protected float attackBoost = 0;
+    protected float healthBoost = 0;
+    protected float speedBoost = 0;
+    protected float defenseBoost = 0;
 
     public Item(Sprite sprite, int x, int y) {
         this.sprite = sprite;
@@ -88,5 +94,20 @@ public abstract class Item implements Disposable {
             return bounds.overlaps(playerBounds);
         }
         return false;
+    }
+
+    public void applyEffects(Player player) {
+        if (healthBoost > 0) {
+            player.heal(healthBoost);
+        }
+        if (attackBoost > 0) {
+            player.increaseAttack(attackBoost);
+        }
+        if (speedBoost > 0) {
+            player.increaseSpeed(speedBoost);
+        }
+        if (defenseBoost > 0) {
+            player.increaseDefense(defenseBoost);
+        }
     }
 }

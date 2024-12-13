@@ -11,9 +11,9 @@ public class Goblin extends AbstractMonster {
         this.attack = 12;       // Medium attack
         this.speed = 1f;
         this.DETECTION_RANGE = 600f;
-        this.ATTACK_RANGE = 60f;
+        this.ATTACK_RANGE = 30f;
         this.ATTACK_COOLDOWN = 1.0f;
-        this.CHASE_SPEED = 100f;
+        this.CHASE_SPEED = 65f;
         this.currentState = MonsterState.IDLE;
         
         createBody(x, y);
@@ -29,10 +29,10 @@ public class Goblin extends AbstractMonster {
         Texture deathSheet = new Texture("sprites/monster/Goblin/Death.png");
         
         idleAnimation = createAnimation(idleSheet, 4, 0.1f);
-        runAnimation = createAnimation(runSheet, 8, 0.5f);
-        attack1Animation = createAnimation(attackSheet, 8, 1.0f);
+        runAnimation = createAnimation(runSheet, 8, 0.3f);
+        attack1Animation = createAnimation(attackSheet, 8, 0.6f);
         takeHitAnimation = createAnimation(hitSheet, 4, 0.5f);
-        deathAnimation = createAnimation(deathSheet, 4, 0.5f);
+        deathAnimation = createAnimation(deathSheet, 4, 1f);
     }
 
     private Animation<TextureRegion> createAnimation(Texture sheet, int frameCount, float frameDuration) {

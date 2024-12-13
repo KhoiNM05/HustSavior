@@ -32,9 +32,12 @@ public class GameTimer {
         stage.addActor(table);
     }
     
-    public void update(float delta) {
-        totalTime += delta;
-        updateTimerDisplay();
+    public void update(float delta, boolean isDialogActive) {
+        // Only update time if no dialog is active
+        if (!isDialogActive) {
+            totalTime += delta;
+            updateTimerDisplay();
+        }
     }
     
     private void updateTimerDisplay() {
@@ -45,5 +48,9 @@ public class GameTimer {
     
     public void dispose() {
         timerLabel.getStyle().font.dispose();
+    }
+    
+    public float getTotalTime() {
+        return totalTime;
     }
 } 

@@ -9,6 +9,7 @@ public class HPPotion extends Item {
         this.imagePath = "item/hp_potion.png";
         this.dialogMessage = "a Health Potion!\nRestores 50 HP";
         this.id = 4;
+        this.healthBoost = 50;
     }
 }
 

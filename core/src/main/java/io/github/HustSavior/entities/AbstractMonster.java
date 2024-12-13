@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Vector2;
 import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
+
 import io.github.HustSavior.utils.GameConfig;
 
 public abstract class AbstractMonster {
@@ -71,8 +72,8 @@ public abstract class AbstractMonster {
     protected boolean isFinishingAttack = false;
     
     // Add these constants at the top
-    protected static final float PUSH_FORCE = 2.0f;
-    protected static final float PUSH_RECOVERY_TIME = 0.2f;
+    protected static final float PUSH_FORCE = 3.0f;
+    protected static final float PUSH_RECOVERY_TIME = 0.5f;
     protected float pushRecoveryTimer = 0;
     
     protected TiledMap map;
@@ -133,11 +134,11 @@ public abstract class AbstractMonster {
         batch.draw(currentFrame, x, y);
     }
     
-    protected Animation<TextureRegion> getCurrentAnimation() {
+    public Animation<TextureRegion> getCurrentAnimation() {
         switch (currentState) {
             case IDLE: return idleAnimation;
             case RUNNING: return runAnimation;
-            case ATTACKING: return attack1Animation; // Default to attack1
+            case ATTACKING: return attack1Animation;
             case TAKE_HIT: return takeHitAnimation;
             case DEATH: return deathAnimation;
             default: return idleAnimation;
@@ -163,32 +164,38 @@ public abstract class AbstractMonster {
     }
     
     public boolean isAlive() {
-        return hp > 0;
+        return hp > 0 && currentState != MonsterState.DEATH;
     }
     
     public void takeDamage(float damage) {
         if (!isAlive()) return;
-    
-        // Apply damage
+
         hp -= damage;
-        Gdx.app.log("Monster", "Taking damage: " + damage + ", HP remaining: " + hp);
-    
-        // Handle state changes
+        System.out.println("Monster taking damage: " + damage + ", HP: " + hp);
+
         if (hp <= 0) {
+            // Ensure death
             hp = 0;
-            handleDeath();
-        } else if (currentState != MonsterState.DEATH) {
-            // Enter hit state and apply knockback
-            changeState(MonsterState.TAKE_HIT);
+            isFinishingAttack = false;
+            attackTimer = ATTACK_COOLDOWN;
+            velocity.setZero();
+            System.out.println("Monster died, forcing DEATH state");
+            
+            // Force death state
+            currentState = MonsterState.DEATH;
             stateTime = 0;
-    
-            // Apply knockback away from player
-            Vector2 knockbackDir = new Vector2(
-                position.x - player.getPosition().x,
-                position.y - player.getPosition().y
-            ).nor().scl(PUSH_FORCE * 2);  // Increased knockback force
-            handlePush(knockbackDir);
+            
+            // Cancel all other states/actions
+            isAggro = false;
+            pushRecoveryTimer = 0;
+            
+            return;  // Skip any other state changes
         }
+
+        // Only process hit animation if not dead
+        System.out.println("Monster hit, changing to TAKE_HIT state");
+        changeState(MonsterState.TAKE_HIT);
+        stateTime = 0;
     }
     
     // Getters
@@ -214,29 +221,19 @@ public abstract class AbstractMonster {
     
   
     protected  void renderMonster(SpriteBatch batch){
+        // Don't render if death animation is complete
+        if (currentState == MonsterState.DEATH && 
+            deathAnimation != null && 
+            deathAnimation.isAnimationFinished(stateTime)) {
+            return;
+        }
+        
         if (isTransparent) {
-            batch.setColor(1, 1, 1, 0.5f); // Example: 50% transparency
+            batch.setColor(1, 1, 1, 0.5f);
         }
         
-        TextureRegion currentFrame = null;
-        
-        switch (currentState) {
-            case IDLE:
-                currentFrame = idleAnimation.getKeyFrame(stateTime, true);
-                break;
-            case RUNNING:
-                currentFrame = runAnimation.getKeyFrame(stateTime, true);
-                break;
-            case ATTACKING:
-                currentFrame = attack1Animation.getKeyFrame(stateTime, false);
-                break;
-            case TAKE_HIT:
-                currentFrame = takeHitAnimation.getKeyFrame(stateTime, false);
-                break;
-            case DEATH:
-                currentFrame = deathAnimation.getKeyFrame(stateTime, false);
-                break;
-        }
+        TextureRegion currentFrame = getCurrentAnimation().getKeyFrame(stateTime, 
+            currentState != MonsterState.DEATH); // Only loop if not death animation
         
         if (currentFrame != null) {
             float x = position.x - currentFrame.getRegionWidth() / 2f;
@@ -291,14 +288,20 @@ public abstract class AbstractMonster {
     public void update(float delta, Player player) {
         if (!isAlive() || player == null) return;
 
+        // If monster is dead, only update death animation
+        if (currentState == MonsterState.DEATH) {
+            stateTime += delta;
+            return;  // Skip all other updates
+        }
+
         // Update velocity (now includes collision checks)
         updateVelocity(player, delta);
 
         // Apply movement
         position.x += velocity.x * delta;
         position.y += velocity.y * delta;
+        
         updateBounds();
-
         updateAnimation(delta);
         updateTimers(delta);
     }
@@ -317,13 +320,24 @@ public abstract class AbstractMonster {
     }
 
     private void updateVelocity(Player player, float delta) {
+        if (!isAlive() || currentState == MonsterState.DEATH) {
+            velocity.setZero();
+            return;
+        }
+
+        if (player == null) {
+            Gdx.app.error("Monster", "Player reference is null!");
+            return;
+        }
+        System.out.println(position);
+
         Vector2 playerPos = player.getPosition();
         Vector2 toPlayer = new Vector2(
             playerPos.x - position.x,
             playerPos.y - position.y
         );
         float distanceToPlayer = toPlayer.len();
-
+        System.out.println(distanceToPlayer);
         if (distanceToPlayer <= DETECTION_RANGE) {
             isAggro = true;
             Vector2 direction = toPlayer.nor();
@@ -373,23 +387,38 @@ public abstract class AbstractMonster {
    
     protected void updateAnimation(float delta) {
         stateTime += delta;
-    
+        
+        // If monster is dead, only handle death animation
+        if (!isAlive() || currentState == MonsterState.DEATH) {
+            changeState(MonsterState.DEATH);
+            return;
+        }
+
+        // Handle attack animation
         if (currentState == MonsterState.ATTACKING) {
-            if (stateTime >= attack1Animation.getAnimationDuration()) {
+            if (attack1Animation.isAnimationFinished(stateTime)) {
                 isFinishingAttack = false;
-                changeState(MonsterState.RUNNING);
+                changeState(MonsterState.IDLE);
                 stateTime = 0;
-                attackTimer = ATTACK_COOLDOWN;
+                return;
             }
         }
-    
-        if (currentState == MonsterState.TAKE_HIT && takeHitAnimation.isAnimationFinished(stateTime)) {
-            changeState(MonsterState.IDLE);
+
+        // Handle take hit animation
+        if (currentState == MonsterState.TAKE_HIT) {
+            if (takeHitAnimation.isAnimationFinished(stateTime)) {
+                changeState(MonsterState.IDLE);
+                stateTime = 0;
+                return;
+            }
         }
-    
-        if (currentState == MonsterState.DEATH && deathAnimation.isAnimationFinished(stateTime)) {
-            // Remove monster from screen and return to pool
-            removeFromScreen();
+
+        // Update movement states
+        if (velocity.len() > 0 && currentState != MonsterState.ATTACKING) {
+            changeState(MonsterState.RUNNING);
+        } else if (currentState != MonsterState.ATTACKING && 
+                   currentState != MonsterState.TAKE_HIT) {
+            changeState(MonsterState.IDLE);
         }
     }
     
@@ -416,13 +445,11 @@ public abstract class AbstractMonster {
     
 
 
-    protected void changeState(MonsterState newState) {
+    public void changeState(MonsterState newState) {
+        // Don't change state if dead except to DEATH state
+        if (currentState == MonsterState.DEATH) return;
+        
         if (currentState != newState) {
-            Gdx.app.log("Monster", String.format(
-                "State Change: %s -> %s", 
-                currentState, 
-                newState
-            ));
             currentState = newState;
             stateTime = 0;
         }
@@ -478,11 +505,28 @@ public abstract class AbstractMonster {
         stateTime = 0;
     }
 
-    protected void removeFromScreen() {
-        // Implement logic to remove monster from screen and return to pool
-        // This could involve setting a flag or calling a method in the MonsterPool class
-        // For example:
-        MonsterPool.getInstance().free(this);
+    
+
+    protected float maxHp;  // Add this field
+
+    public float getMaxHp() {
+        return maxHp;
     }
 
+    public void setHp(float hp) {
+        this.hp = hp;
+    }
+
+    public float getStateTime() {
+        return stateTime;
+    }
+
+    public void attack() {
+        if (!isAlive() || currentState == MonsterState.DEATH) return;
+        
+        changeState(MonsterState.ATTACKING);
+        stateTime = 0;
+        isFinishingAttack = true;
+    }
+    
 }

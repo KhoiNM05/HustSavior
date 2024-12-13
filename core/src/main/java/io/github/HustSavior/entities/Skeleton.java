@@ -8,12 +8,12 @@ public class Skeleton extends AbstractMonster {
     public Skeleton(float x, float y, Player player) {
         super(player);
         this.hp = 80;
-        this.attack = 15;
+        this.attack = 10;
         this.speed = 1f;
         this.DETECTION_RANGE = 450f;
-        this.ATTACK_RANGE = 45f;
+        this.ATTACK_RANGE = 15f;
         this.ATTACK_COOLDOWN = 1.2f;
-        this.CHASE_SPEED = 100f;
+        this.CHASE_SPEED = 60f;
         this.currentState = MonsterState.IDLE;
         
         createBody(x, y);
@@ -30,9 +30,9 @@ public class Skeleton extends AbstractMonster {
         
         idleAnimation = createAnimation(idleSheet, 4, 0.1f);
         runAnimation = createAnimation(walkSheet, 4, 0.5f);
-        attack1Animation = createAnimation(attackSheet, 8, 0.7f);
+        attack1Animation = createAnimation(attackSheet, 8, 0.6f);
         takeHitAnimation = createAnimation(hitSheet, 4, 0.5f);
-        deathAnimation = createAnimation(deathSheet, 4, 0.5f);
+        deathAnimation = createAnimation(deathSheet, 4, 1f);
     }
 
     private Animation<TextureRegion> createAnimation(Texture sheet, int frameCount, float frameDuration) {

@@ -6,8 +6,9 @@ public class AlgebraBook extends Item{
     public AlgebraBook(Sprite sprite, int x, int y) {
         super(sprite, x, y);
         this.imagePath = "item/algebra.jpg";
-        this.dialogMessage = "an Algebra Book!\nMatrix operations unlocked";
+        this.dialogMessage = "an Algebra Book!\nDefense +5";
         this.id = 2;
+        this.defenseBoost = 5;
     }
 
 

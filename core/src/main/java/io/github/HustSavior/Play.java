@@ -11,8 +11,10 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
@@ -52,10 +54,10 @@ import io.github.HustSavior.items.Shield;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
+import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.Slash;
 import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.spawn.SpawnManager;
-import io.github.HustSavior.spawner.MonsterPool;
 import io.github.HustSavior.spawner.MonsterSpawnManager;
 import io.github.HustSavior.ui.GameTimer;
 import io.github.HustSavior.ui.InventoryTray;
@@ -65,6 +67,7 @@ import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
 import io.github.HustSavior.utils.transparency.TreeTransparencyManager;
 import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.skills.SkillManager;
+import io.github.HustSavior.entities.AbstractMonster.MonsterState;
 public class Play implements Screen {
     private static final float PPM = GameConfig.PPM;
 //    private static final float INITIAL_ZOOM = -1.2f;
@@ -88,7 +91,7 @@ public class Play implements Screen {
     private final Player player;
     private BulletManager bulletManager;
     // Skill
-    private final AssetSetter assetSetter;
+    private AssetSetter assetSetter;
     private  SkillManager skillManager;
     private final InputHandler inputHandler;
     private  World world;
@@ -154,13 +157,40 @@ public class Play implements Screen {
     private float cleanupTimer = 0;
 
     private Array<AbstractMonster> monsters;
-    private MonsterPool monsterPool;
+   
     private MonsterSpawnManager monsterSpawnManager;
 
     private boolean isGameOver = false;
     private boolean isDisposed = false;
 
+    private static final float ITEM_SPAWN_INTERVAL = 10f; // Spawn every 10 seconds
+    private float itemSpawnTimer = 0f;
+    private Array<SpawnPoint> spawnPoints;
+
+    // Create a helper class for spawn points
+    private class SpawnPoint {
+        int x, y;
+        String type;
+        boolean isOccupied;
+
+        SpawnPoint(int x, int y, String type) {
+            this.x = x;
+            this.y = y;
+            this.type = type;
+            this.isOccupied = false;
+        }
+    }
+
+    private static final float INFECTION_TIME = 180f; // 3 minutes in seconds
+    private static final float INFECTION_DAMAGE = 10f;
+    private static final float INFECTION_TICK = 1f; // Damage every second
+    private boolean isInfected = false;
+    private float infectionTimer = 0f;
+
     public Play(Game game) {
+        // Set debug level at the very start
+        Gdx.app.setLogLevel(Application.LOG_DEBUG);
+        
         this.game = game;
         this.batch = new SpriteBatch();
 
@@ -176,7 +206,7 @@ public class Play implements Screen {
         // Initialize player
         player = new Player(
             new Sprite(new Texture("sprites/WalkRight1.png")),
-            450,    // x coordinate
+            400,    // x coordinate
             500,    // y coordinate
             world,
             game,
@@ -270,7 +300,14 @@ public class Play implements Screen {
             gameMap.getTiledMap()
         );
 
+        // monsterSpawnManager = new MonsterSpawnManager(player, monsters, camera, gameMap);
+        // MonsterPool.setInstance(monsterPool);
 
+        // Show welcome dialog after everything is initialized
+        dialogManager.showWelcomeDialog();
+
+        initItems();
+        initSpawnPoints();
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -378,8 +415,9 @@ public class Play implements Screen {
             batch.end();
             return;
         }
+
         if(gameMap != null) {
-            if (!isPaused) {
+            if (!isPaused && !dialogManager.isDialogActive()) {
                 update(delta);
                 updateGame(delta);
                 if (monsters == null) {
@@ -392,7 +430,7 @@ public class Play implements Screen {
                         AbstractMonster monster = monsters.get(i);
                         if (monster != null) {
 
-
+                    
                             monster.update(delta, player);
 
 
@@ -415,6 +453,7 @@ public class Play implements Screen {
                 // Single update location for monsters
                 for (AbstractMonster monster : monsters) {
                     if (monster != null && monster.isAlive()) {
+                      
                         monster.update(delta, player);
                     }
                 }
@@ -438,19 +477,21 @@ public class Play implements Screen {
                 uiStage.act(delta);
                 uiStage.draw();
             }
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setProjectionMatrix(camera.combined);
+           // shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+          //  shapeRenderer.setProjectionMatrix(camera.combined);
 
             // Render collision bounds
-            tileCollision.renderDebug(shapeRenderer);
+           // tileCollision.renderDebug(shapeRenderer);
 
             // Render monster bounds
-            for (AbstractMonster monster : monsters) {
-                monster.renderDebug(shapeRenderer);
-            }
+            // for (AbstractMonster monster : monsters) {
+            //     monster.renderDebug(shapeRenderer);
+            // }
 
-            shapeRenderer.end();
+           // shapeRenderer.end();
         }
+
+        
     }
 
     private Rectangle getViewBounds() {
@@ -572,16 +613,12 @@ public class Play implements Screen {
         // Draw monsters and player
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        if (monsters != null) {
-            for (AbstractMonster monster : monsters) {
-                if (monster != null) {
-                    monster.draw(batch);
-                }
-            }
-        }
-
+        renderMonsters(batch);
         if (bulletManager != null) {
             bulletManager.render(batch, viewBounds);
+        }
+        if (player != null) {
+            player.draw(batch);
         }
         batch.end();
         if (buildingTransparencyManager != null && player != null) {
@@ -827,29 +864,71 @@ public class Play implements Screen {
     }
 
     private void initMonsterSystem() {
-        Gdx.app.debug("Play", "Initializing monster system");
+        System.out.println("Initializing monster system...");
         monsters = new Array<AbstractMonster>(false, 16);
-        monsterPool = new MonsterPool(player);
+        
+        // Initialize MonsterSpawnManager with required parameters
         monsterSpawnManager = new MonsterSpawnManager(
-            player,
-            monsters,
-            camera,
-            gameMap.getTiledMap(),
-            monsterPool
+            player, 
+            monsters,  // Pass the monsters array reference
+            camera, 
+            gameMap.getTiledMap()
         );
-        Gdx.app.debug("Play", "Monster system initialized with array: " + monsters.toString());
+        
+        // Add initial monsters
+        for (int i = 0; i < 3; i++) {  // Start with 3 monsters
+            monsterSpawnManager.trySpawnMonster();
+        }
+        
+        System.out.println("Monster system initialized. Initial count: " + monsters.size);
     }
 
     private void update(float delta) {
         if (isDisposed || gameMap == null) return;
-        if (!isPaused) {
+        
+        // Check for player death before any other updates
+        if (player != null && !player.isAlive()) {
+            setGameOver();
+            return;
+        }
+        
+        // Rest of your existing update logic...
+        if (gameTimer != null) {
+            gameTimer.update(delta, dialogManager.isDialogActive());
+            updateInfectionStatus(delta);
+        }
+        
+        // Only update game logic if no dialog is active and game is not paused
+        if (!isPaused && !dialogManager.isDialogActive()) {
             // Update player
             if (player != null) {
                 player.update(delta);
-
-                // Get player position once
-
             }
+
+            // Update monster spawning
+            spawnTimer += delta;
+            if (spawnTimer >= SPAWN_INTERVAL && monsters.size < MAX_MONSTERS) {
+                monsterSpawnManager.trySpawnMonster();
+                spawnTimer = 0;
+            }
+
+            // Update monsters and remove dead ones
+            for (int i = monsters.size - 1; i >= 0; i--) {
+                AbstractMonster monster = monsters.get(i);
+                if (monster != null) {
+                    if (!monster.isAlive()) {
+                        // If monster is dead and death animation is finished
+                        if (monster.getCurrentState() == MonsterState.DEATH && 
+                            monster.getCurrentAnimation().isAnimationFinished(monster.getStateTime())) {
+                            monsters.removeIndex(i);
+                            System.out.println("Monster removed after death");
+                            continue;
+                        }
+                    }
+                    monster.update(delta, player);
+                }
+            }
+
             updateCamera();
             if (bulletManager != null) {
                 bulletManager.update(delta);
@@ -878,10 +957,23 @@ public class Play implements Screen {
                 }
                 checkItemPickup();
                 updateCamera();
-                if (!isPaused) {
-
-                    for (AbstractMonster monster : monsters) {
-                        monster.update(delta, player);
+                // Update monsters
+                System.out.println("monster size: " + monsters.size);
+                for (int i = monsters.size - 1; i >= 0; i--) {
+                    AbstractMonster monster = monsters.get(i);
+                    if (monster != null) {
+                        if (monster.isAlive()) {
+                            monster.update(delta, player);
+                        } else {
+                            // Keep updating until death animation completes
+                            monster.update(delta, player);
+                            Animation<TextureRegion> deathAnim = monster.getCurrentAnimation();
+                            if (deathAnim != null && deathAnim.isAnimationFinished(monster.getStateTime())) {
+                                monster.dispose(); // Clean up resources
+                                monsters.removeIndex(i); // Remove from array immediately
+                                continue; // Skip rendering this monster
+                            }
+                        }
                     }
                 }
 
@@ -892,6 +984,9 @@ public class Play implements Screen {
                     cleanupTimer = 0;
                 }
             }
+            
+            updateItemVisibility();
+            updateItemSpawning(delta);
         }
     }
 
@@ -904,9 +999,6 @@ public class Play implements Screen {
                 // Set dialog active state
                 inputHandler.setDialogActive(true);
 
-                // Handle specific item effects
-                handleItemEffect(item);
-
                 // Show dialog with proper parameters
                 dialogManager.showItemPickupDialog(
                     item.getDialogMessage(),
@@ -917,10 +1009,14 @@ public class Play implements Screen {
                         assetSetter.objectAcquired(item);
                         inventoryTray.addItem(item.getImagePath());
                         inputHandler.setDialogActive(false);
+                        
+                        // Apply item effects
+                        handleItemEffect(item);
                     }
                 );
                 break;
             }
+            
         }
     }
 
@@ -946,6 +1042,10 @@ public class Play implements Screen {
 
     public void setGameOver() {
         isGameOver = true;
+        // Show game over dialog and transition to death screen
+        dialogManager.showWarningDialog("Game Over!", () -> {
+            game.setScreen(new DeathScreen((HustSavior)game, game.getScreen()));
+        });
     }
 
 
@@ -954,4 +1054,150 @@ public class Play implements Screen {
     }
 
     public Screen getScreen(){return game.getScreen();}
+
+    private void renderMonsters(SpriteBatch batch) {
+        for (AbstractMonster monster : monsters) {
+            if (monster != null && (monster.isAlive() || 
+                (monster.getCurrentState() == MonsterState.DEATH && 
+                 !monster.getCurrentAnimation().isAnimationFinished(monster.getStateTime())))) {
+                monster.render(batch);
+            }
+        }
+    }
+
+    private void updateItemVisibility() {
+        if (player != null && assetSetter != null && gameMap != null) {
+            Vector2 playerPos = player.getPosition();
+            assetSetter.updateItemVisibility(playerPos, gameMap.getTiledMap());
+        }
+    }
+
+    private void initItems() {
+        System.out.println("Initializing items...");
+        assetSetter = new AssetSetter();
+        
+        // Get the spawning layer from the map
+        MapLayer spawnLayer = gameMap.getTiledMap().getLayers().get("spawning_layer");
+        if (spawnLayer != null) {
+            for (MapObject object : spawnLayer.getObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                    String type = object.getProperties().get("type", String.class);
+                    
+                    // Convert coordinates to world units
+                    int x = (int) rect.x;
+                    int y = (int) rect.y;
+                    
+                    // Spawn different items based on type property
+                    switch (type) {
+                        case "calcbook":
+                            assetSetter.createObject(x, y, 1);
+                            break;
+                        case "algebrabook":
+                            assetSetter.createObject(x, y, 2);
+                            break;
+                        case "physicbook":
+                            assetSetter.createObject(x, y, 3);
+                            break;
+                        case "hppotion":
+                            assetSetter.createObject(x, y, 4);
+                            break;
+                        case "shield":
+                            assetSetter.createObject(x, y, 5);
+                            break;
+                    }
+                    System.out.println("Spawned item type: " + type + " at: " + x + "," + y);
+                }
+            }
+        } else {
+            System.out.println("Warning: spawning_layer not found in map");
+        }
+    }
+
+    private void initSpawnPoints() {
+        spawnPoints = new Array<>();
+        MapLayer spawnLayer = gameMap.getTiledMap().getLayers().get("spawning");
+        
+        if (spawnLayer != null) {
+            for (MapObject object : spawnLayer.getObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                    String type = object.getProperties().get("type", String.class);
+                    spawnPoints.add(new SpawnPoint((int)rect.x, (int)rect.y, type));
+                }
+            }
+        }
+    }
+
+    private void updateItemSpawning(float delta) {
+        if (spawnPoints == null || spawnPoints.size == 0) return;
+        
+        itemSpawnTimer += delta;
+        
+        if (itemSpawnTimer >= ITEM_SPAWN_INTERVAL) {
+            itemSpawnTimer = 0;
+            
+            // Find unoccupied spawn points
+            Array<SpawnPoint> availablePoints = new Array<>();
+            for (SpawnPoint point : spawnPoints) {
+                if (!point.isOccupied && point.type != null) {
+                    availablePoints.add(point);
+                }
+            }
+            
+            // Spawn item at random available point
+            if (availablePoints.size > 0) {
+                SpawnPoint selectedPoint = availablePoints.random();
+                int itemId = getItemIdFromType(selectedPoint.type);
+                
+                if (itemId > 0) {
+                    assetSetter.createObject(selectedPoint.x, selectedPoint.y, itemId);
+                    selectedPoint.isOccupied = true;
+                    System.out.println("Spawned item type: " + selectedPoint.type + 
+                                     " at: " + selectedPoint.x + "," + selectedPoint.y);
+                }
+            }
+        }
+    }
+
+    private int getItemIdFromType(String type) {
+        if (type == null) return 0;
+        
+        switch (type.toLowerCase()) {
+            case "calcbook": return 1;
+            case "algebrabook": return 2;
+            case "physicbook": return 3;
+            case "hppotion": return 4;
+            case "shield": return 5;
+            default: return 0;
+        }
+    }
+
+    public void handleItemPickup(Item item) {
+        // ... existing pickup code ...
+        
+        // Free up spawn point
+        for (SpawnPoint point : spawnPoints) {
+            if (point.x == (int)item.getX() && point.y == (int)item.getY()) {
+                point.isOccupied = false;
+                break;
+            }
+        }
+    }
+
+    private void updateInfectionStatus(float delta) {
+        if (!isInfected && gameTimer.getTotalTime() >= INFECTION_TIME) {
+            isInfected = true;
+            // Show infection dialog
+            dialogManager.showWarningDialog("You are infected, find a way out of here!", null);
+        }
+
+        if (isInfected && !dialogManager.isDialogActive()) {
+            infectionTimer += delta;
+            if (infectionTimer >= INFECTION_TICK) {
+                player.takeDamage(INFECTION_DAMAGE);
+                infectionTimer = 0f;
+            }
+        }
+    }
 }

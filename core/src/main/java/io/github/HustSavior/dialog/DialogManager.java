@@ -14,6 +14,7 @@ public class DialogManager implements Disposable {
     private WarningDialog warningDialog;
     private ItemPickupDialog itemPickupDialog;
     private boolean dialogActive = false;
+    private WelcomeDialog welcomeDialog;
     
     public DialogManager(Stage stage, Skin skin, InputHandler inputHandler) {
         this.stage = stage;
@@ -22,10 +23,17 @@ public class DialogManager implements Disposable {
         
         this.warningDialog = new WarningDialog(stage, this.skin, inputHandler);
         this.itemPickupDialog = new ItemPickupDialog(stage, this.skin, inputHandler);
+        this.welcomeDialog = new WelcomeDialog(stage, this.skin, inputHandler);
     }
 
     public void showWarningDialog(String message, Runnable onClose) {
-        warningDialog.createDialog(message, onClose);
+        dialogActive = true;
+        warningDialog.createDialog(message, () -> {
+            dialogActive = false;
+            if (onClose != null) {
+                onClose.run();
+            }
+        });
     }
 
     public void showItemPickupDialog(String message, String imagePath, Runnable onClose) {
@@ -38,6 +46,17 @@ public class DialogManager implements Disposable {
             }
         });
     }
+
+    public void showWelcomeDialog() {
+        dialogActive = true;
+        welcomeDialog.createDialog(
+            "Explore and defend against all monsters attacking you, escape before it's too late!",
+            () -> {
+                dialogActive = false;
+            }
+        );
+    }
+
     public void update(float delta) {
         if (warningDialog != null) {
             warningDialog.update(delta);

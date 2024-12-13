@@ -14,7 +14,7 @@ public class FlyingEye extends AbstractMonster {
         this.DETECTION_RANGE = 500f;
         this.ATTACK_RANGE = 10f;
         this.ATTACK_COOLDOWN = 1.0f;
-        this.CHASE_SPEED = 100f;
+        this.CHASE_SPEED = 65f;
         this.currentState = MonsterState.IDLE;
         
         createBody(x, y);
@@ -30,9 +30,9 @@ public class FlyingEye extends AbstractMonster {
         
         idleAnimation = createAnimation(flightSheet, 8, 0.1f);
         runAnimation = idleAnimation;
-        attack1Animation = createAnimation(attackSheet, 8, 1.0f);
-        takeHitAnimation = createAnimation(hitSheet, 4, 0.2f);
-        deathAnimation = createAnimation(deathSheet, 4, 0.3f);
+        attack1Animation = createAnimation(attackSheet, 8, 0.6f);
+        takeHitAnimation = createAnimation(hitSheet, 4, 0.5f);
+        deathAnimation = createAnimation(deathSheet, 4, 1f);
     }
 
     @Override

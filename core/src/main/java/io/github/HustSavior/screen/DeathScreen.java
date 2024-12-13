@@ -37,7 +37,7 @@ public class DeathScreen implements Screen {
     }
 
     public DeathScreen(Game game, Screen previousScreen) {
-        this.game = (HustSavior) game;
+        this.game = (HustSavior)game;
         this.previousScreen = previousScreen;
         
         camera = new OrthographicCamera();
@@ -95,7 +95,7 @@ public class DeathScreen implements Screen {
             case FADE_OUT:
                 if (fadeTimer >= FADE_OUT_DURATION) {
                     if (previousScreen != null) {
-                        previousScreen.dispose();  // Clean up Play screen
+                        previousScreen.dispose();  // Only dispose when transitioning to main menu
                     }
                     game.setScreen(new MainMenuScreen(game));
                 }

@@ -125,10 +125,7 @@ public class Slash extends Sprite implements Skills{
             );
             
             // Debug print for slash hitbox
-            System.out.println("Slash hitbox: x=" + slashBounds.x + 
-                              ", y=" + slashBounds.y + 
-                              ", width=" + slashBounds.width + 
-                              ", height=" + slashBounds.height);
+            
         }
 
         stateTime += delta;
@@ -143,11 +140,11 @@ public class Slash extends Sprite implements Skills{
                 slashBounds.height / GameConfig.PPM
             );
 
-            System.out.println("Number of monsters: " + monsters.size);
-            System.out.println("Slash bounds (world units): x=" + worldSlashBounds.x + ", y=" + worldSlashBounds.y + ", width=" + worldSlashBounds.width + ", height=" + worldSlashBounds.height);
+          //  System.out.println("Number of monsters: " + monsters.size);
+         //   System.out.println("Slash bounds (world units): x=" + worldSlashBounds.x + ", y=" + worldSlashBounds.y + ", width=" + worldSlashBounds.width + ", height=" + worldSlashBounds.height);
             for (AbstractMonster monster : monsters) {
                 Rectangle monsterBounds = monster.getBounds();
-                System.out.println("Monster bounds: x=" + monsterBounds.x + ", y=" + monsterBounds.y + ", width=" + monsterBounds.width + ", height=" + monsterBounds.height);
+             //   System.out.println("Monster bounds: x=" + monsterBounds.x + ", y=" + monsterBounds.y + ", width=" + monsterBounds.width + ", height=" + monsterBounds.height);
                 
                 if (!hitMonsters.contains(monster, true) && monsterBounds.overlaps(worldSlashBounds)) {
                     System.out.println("Hit detected!");
@@ -172,9 +169,9 @@ public class Slash extends Sprite implements Skills{
 
     public boolean isReady(){
         boolean ready = cd.isReady();
-        System.out.println("Checking if ready: Timer=" + cd.getCurrentTimer() + 
-                          " Cooldown=" + cd.getCooldownValue() + 
-                          " Ready=" + ready);
+       // System.out.println("Checking if ready: Timer=" + cd.getCurrentTimer() + 
+        //                  " Cooldown=" + cd.getCooldownValue() + 
+        //                  " Ready=" + ready);
         return ready;
     }
 

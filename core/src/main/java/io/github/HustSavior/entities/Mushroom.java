@@ -13,7 +13,7 @@ public class Mushroom extends AbstractMonster {
         this.DETECTION_RANGE = 400f;
         this.ATTACK_RANGE = 40f;
         this.ATTACK_COOLDOWN = 2.0f;
-        this.CHASE_SPEED = 100f;
+        this.CHASE_SPEED = 60f;
         this.currentState = MonsterState.IDLE;
         
         createBody(x, y);
@@ -30,9 +30,9 @@ public class Mushroom extends AbstractMonster {
         
         idleAnimation = createAnimation(idleSheet, 4, 0.1f);
         runAnimation = createAnimation(runSheet, 8, 0.5f);
-        attack1Animation = createAnimation(attackSheet, 8, 1.0f);
+        attack1Animation = createAnimation(attackSheet, 8, 0.6f);
         takeHitAnimation = createAnimation(hitSheet, 4, 0.5f);
-        deathAnimation = createAnimation(deathSheet, 4, 0.5f);
+        deathAnimation = createAnimation(deathSheet, 4, 1f);
     }
 
     private Animation<TextureRegion> createAnimation(Texture sheet, int frameCount, float frameDuration) {

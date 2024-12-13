@@ -22,9 +22,13 @@ import io.github.HustSavior.utils.GameConfig;
 
 public class Player extends Sprite {
     private static final float PPM = GameConfig.PPM;
-    private static final float ANIMATION_SPEED = 0.2f;
-    private static final float MOVEMENT_SPEED = 200f;
+    private static final float ANIMATION_SPEED = 50f;
+    private static final float MOVEMENT_SPEED = 70f;
     private static final float COLLISION_RADIUS = 8f;
+
+    private static final float SHIELD_DURATION = 10f; // 10 seconds shield duration
+    private float shieldTimer = 0f;
+    private boolean shieldActive = false;
 
 
 
@@ -57,10 +61,7 @@ public class Player extends Sprite {
     private static final float XP_BAR_HEIGHT = 10f;
     private static final float XP_BAR_OFFSET_Y = 15f;
     // Shield
-    private static final float SHIELD_DURATION = 3f; // 10 seconds shield
     private static final float SHIELD_ANIMATION_FRAME_DURATION = 0.1f; // Controls animation speed
-    private boolean shieldActive;
-    private float shieldTimeRemaining;
     private Animation<TextureRegion> shieldAnimation;
     private float shieldStateTime;
     private TextureRegion[] shieldFrames;
@@ -117,6 +118,10 @@ public class Player extends Sprite {
 
     private boolean slashActivated = false;  // Add this field
 
+    private float defense = 10f;
+    private float attack = 10f;
+  
+
     public Player(Sprite sprite, float x, float y, World world, Game game, TiledMap tiledMap) {
         super(sprite);
         this.game = game;
@@ -148,8 +153,8 @@ public class Player extends Sprite {
         setPosition(x - width/2, y - height/2);
 
         // Initialize other components
-        this.health = 10000;
-        this.maxHealth = 10000;
+        this.health = 100;
+        this.maxHealth = 100;
         this.xp = 0;
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
@@ -167,6 +172,9 @@ public class Player extends Sprite {
         this.mapHeight = GameConfig.MAP_HEIGHT;
 
         this.camera = new OrthographicCamera();
+
+        // Initialize death animation
+        deathAnimation = createDeathAnimation();
     }
 
     public float getHealth() {
@@ -223,9 +231,9 @@ public class Player extends Sprite {
             batch.draw(currentFrame, getX(), getY());
             batch.setColor(1, 1, 1, 1); // Reset batch color
 
-            if (startFading && fadeTimer >= FADE_DURATION) {
-                game.setScreen(new DeathScreen(game, game.getScreen()));
-            }
+            // if (startFading && fadeTimer >= FADE_DURATION) {
+            //     game.setScreen(new DeathScreen(game, game.getScreen()));
+            // }
             return;
         }
         Color oldColor = batch.getColor();
@@ -356,6 +364,16 @@ public class Player extends Sprite {
         bounds.setPosition(x, y);
 
         updateAnimation(delta);
+
+        // Update shield timer
+        if (shieldActive) {
+            shieldTimer += delta;
+            if (shieldTimer >= SHIELD_DURATION) {
+                shieldActive = false;
+                shieldTimer = 0;
+                System.out.println("Shield deactivated");
+            }
+        }
     }
 
 
@@ -580,5 +598,31 @@ public class Player extends Sprite {
 
     public Object getScreen() {
         return game.getScreen();
+    }
+
+    public void increaseAttack(float amount) {
+        this.attack += amount;
+    }
+
+    public void increaseSpeed(float amount) {
+        this.speed += amount;
+    }
+
+    public void increaseDefense(float amount) {
+        this.defense += amount;
+    }
+
+    public void activateShield() {
+        shieldActive = true;
+        shieldTimer = 0;
+        System.out.println("Shield activated for " + SHIELD_DURATION + " seconds");
+    }
+
+    public boolean isShieldActive() {
+        return shieldActive;
+    }
+
+    public boolean isAlive() {
+        return health > 0;
     }
 }
