@@ -126,7 +126,6 @@ public class Shield extends Sprite implements Skills{
 
     public CooldownController getCooldown(){return cd;}
 
-    public void setAOE(float scale){
-        setSize(getRegionWidth()*scale, getRegionHeight()*scale);
+    public void setImprovedSize(float scale){
     }
 }
