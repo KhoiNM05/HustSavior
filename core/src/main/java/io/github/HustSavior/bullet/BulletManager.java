@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Disposable;
 
+import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
 
@@ -19,11 +22,13 @@ public class BulletManager implements Disposable {
     private float timeSinceLastShot = 0;
     private static final int MAX_BULLETS = 1000;
     private final Player player;
+    private final TileCollision tileCollision;
 
-    public BulletManager(Player player, List<AbstractMonster> monsters) {
+    public BulletManager(Player player, List<AbstractMonster> monsters, TiledMap tiledMap) {
         this.bullets = new ArrayList<>();
         this.player = player;
         this.monsters = monsters;
+        this.tileCollision = new TileCollision(tiledMap);
     }
 
     public void update(float delta) {
@@ -32,18 +37,33 @@ public class BulletManager implements Disposable {
         Iterator<Bullet> iterator = bullets.iterator();
         while (iterator.hasNext()) {
             Bullet bullet = iterator.next();
+            Vector2 oldPos = bullet.getPosition().cpy();
             bullet.update(delta);
             
-            // Check collisions with monsters
-            for (AbstractMonster monster : monsters) {
-                if (bullet.getHitbox().overlaps(monster.getBounds())) {
-                    bullet.handleCollision();
-                    // Handle monster damage here
-                }
+            Rectangle hitbox = bullet.getHitbox();
+            
+            // Single collision check
+            if (tileCollision.collidesWith(hitbox)) {
+                Gdx.app.debug("BulletManager", "Collision detected at: " + bullet.getPosition());
+                
+                // Reset to old position
+                bullet.getPosition().set(oldPos);
+                
+                // Determine collision direction
+                Rectangle horizontalTest = new Rectangle(
+                    oldPos.x - bullet.getWidth()/2,
+                    hitbox.y,
+                    bullet.getWidth(),
+                    bullet.getHeight()
+                );
+                
+                boolean hitVertical = !tileCollision.collidesWith(horizontalTest);
+                bullet.handleCollision(hitVertical);
             }
             
-            if (bullet.getCollisionCount() >= 3) {
+            if (!bullet.isActive()) {
                 iterator.remove();
+                Gdx.app.debug("BulletManager", "Bullet removed");
             }
         }
     }
@@ -93,6 +113,29 @@ public class BulletManager implements Disposable {
             }
         }
         timeSinceLastShot = 0;
+    }
+
+    public void checkCollisions(Rectangle mapObject) {
+        
+        
+        for (Bullet bullet : bullets) {
+            Rectangle bulletHitbox = bullet.getHitbox();
+            if (bulletHitbox.overlaps(mapObject)) {
+                Gdx.app.debug("BulletManager", "COLLISION DETECTED!");
+                
+                // Calculate collision normal
+                float dx = bullet.getPosition().x - mapObject.x;
+                float dy = bullet.getPosition().y - mapObject.y;
+                boolean hitVertical = Math.abs(dx) > Math.abs(dy);
+                
+                Gdx.app.debug("BulletManager", "Hit " + (hitVertical ? "vertical" : "horizontal") + 
+                    " wall. Velocity before: " + bullet.getVelocity());
+                
+                bullet.handleCollision(hitVertical);
+                
+                Gdx.app.debug("BulletManager", "Velocity after bounce: " + bullet.getVelocity());
+            }
+        }
     }
 
     @Override

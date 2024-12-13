@@ -50,14 +50,14 @@ public class HighgroundManager implements Disposable {
             if ((area instanceof Rectangle && ((Rectangle) area).contains(x, y)) ||
                 (area instanceof Polygon && ((Polygon) area).contains(x, y))) {
                 onHighground = true;
-                System.out.println("Stepped on highground at: " + x + ", " + y);
+               // System.out.println("Stepped on highground at: " + x + ", " + y);
                 break;
             }
         }
 
         if (onHighground != wasOnHighground) {
             wasOnHighground = onHighground;
-            System.out.println("State changed! New height: " + (onHighground ? "up" : "down"));
+           // System.out.println("State changed! New height: " + (onHighground ? "up" : "down"));
             float newX = x + (onHighground ? X_OFFSET : -X_OFFSET);
             float newY = y + (onHighground ? STEP_HEIGHT : -STEP_HEIGHT);
             return new Vector2(newX, newY);

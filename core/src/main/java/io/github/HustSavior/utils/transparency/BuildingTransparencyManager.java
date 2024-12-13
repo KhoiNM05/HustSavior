@@ -8,6 +8,7 @@ import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Fixture;
@@ -16,7 +17,6 @@ import com.badlogic.gdx.utils.Disposable;
 
 import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
-import io.github.HustSavior.utils.GameConfig;
 
 public class BuildingTransparencyManager extends TransparencyManager implements Disposable {
     private final MapLayer d3Layer;
@@ -47,78 +47,112 @@ public class BuildingTransparencyManager extends TransparencyManager implements 
     
     public void update(Vector2 position) {
         if (position == null) {
-          
+            Gdx.app.debug("Transparency", "Position is null, skipping update");
             return;
         }
 
-        // Convert position to world coordinates (multiply by PPM since position is in physics units)
-        float playerX = position.x * GameConfig.PPM;
-        float playerY = position.y * GameConfig.PPM;
-        
-      
-      
+        // Debug all layers at start of update
+     
+       
 
-     
-     
+        float playerX = position.x;
+        float playerY = position.y;
         
-        // Update each building layer based on its corresponding bounds layer
+        
+
+        // Update each layer
         checkAndUpdateLayer(d3Layer, playerX, playerY, "D3_bounds", "D3");
         checkAndUpdateLayer(d5Layer, playerX, playerY, "D5_bounds", "D5");
         checkAndUpdateLayer(d35Layer, playerX, playerY, "D35_bounds", "D35");
         checkAndUpdateLayer(libraryLayer, playerX, playerY, "Library_bounds", "Library");
         checkAndUpdateLayer(roofLayer, playerX, playerY, "Roof_bounds", "Roof");
         checkAndUpdateLayer(parkingLayer, playerX, playerY, "Parking_bounds", "Parking");
+
+      
+    
     }
 
     private void checkAndUpdateLayer(MapLayer layer, float x, float y, String boundsLayerName, String layerName) {
-        // First check if the layer exists
         if (layer == null) {
-          
+            Gdx.app.debug("Transparency", "Layer is null: " + layerName);
             return;
         }
 
-        // Get and check the bounds layer
+        // Get the bounds layer for checking position
         MapLayer boundsLayer = map.getLayers().get(boundsLayerName);
         if (boundsLayer == null) {
-            
+            Gdx.app.debug("Transparency", "Bounds layer not found: " + boundsLayerName);
             return;
         }
 
-      
-       
+        // Get the actual building layer that we want to make transparent
+        MapLayer buildingLayer = map.getLayers().get(layerName); // Use layerName without "_bounds"
+        if (buildingLayer == null) {
+            Gdx.app.debug("Transparency", "Building layer not found: " + layerName);
+            return;
+        }
 
-        // Check if player is in bounds
         boolean isInBounds = isPlayerInBuildingBounds(x, y, boundsLayer);
         
-        // Set layer opacity based on player position
-        float currentOpacity = layer.getOpacity();
-        float targetOpacity = isInBounds ? TRANSPARENT_ALPHA : OPAQUE_ALPHA;
-        
-        if (Math.abs(currentOpacity - targetOpacity) > 0.01f) {
-            layer.setOpacity(targetOpacity);
-           
+      
+
+        // Set opacity on the actual building layer
+        if (isInBounds) {
+            buildingLayer.setOpacity(0.2f);
+            
+            // If it's a TiledMapTileLayer, update it directly
+            if (buildingLayer instanceof TiledMapTileLayer) {
+                TiledMapTileLayer tileLayer = (TiledMapTileLayer) buildingLayer;
+                tileLayer.setOpacity(0.2f);
+                
+                // Force update all cells
+                for (int cellX = 0; cellX < tileLayer.getWidth(); cellX++) {
+                    for (int cellY = 0; cellY < tileLayer.getHeight(); cellY++) {
+                        TiledMapTileLayer.Cell cell = tileLayer.getCell(cellX, cellY);
+                        if (cell != null) {
+                            cell.setTile(cell.getTile());
+                        }
+                    }
+                }
+            }
+        } else {
+            buildingLayer.setOpacity(1.0f);
         }
+
+        
+        
     }
 
     protected boolean isPlayerInBuildingBounds(float playerX, float playerY, MapLayer boundsLayer) {
-        // Convert player position from physics units to pixel units
-        float playerXInPixels = playerX / GameConfig.PPM;
-        float playerYInPixels = playerY / GameConfig.PPM;
+        // Keep player coordinates in world units (don't divide by PPM yet)
+       
 
         for (MapObject object : boundsLayer.getObjects()) {
             if (object instanceof RectangleMapObject) {
                 RectangleMapObject rectangleObject = (RectangleMapObject) object;
                 Rectangle rect = rectangleObject.getRectangle();
                 
-                // Debug the bounds check
-         
+                // Create a scaled rectangle for comparison
+                Rectangle scaledRect = new Rectangle(
+                    rect.x,        // Keep original x
+                    rect.y,        // Keep original y
+                    rect.width,    // Keep original width
+                    rect.height    // Keep original height
+                );
                 
-                if (rect.contains(playerXInPixels, playerYInPixels)) {
                 
+                
+                // Check if player position (in world units) is within the bounds
+                if (playerX >= scaledRect.x && 
+                    playerX <= scaledRect.x + scaledRect.width &&
+                    playerY >= scaledRect.y && 
+                    playerY <= scaledRect.y + scaledRect.height) {
+                   
                     return true;
                 }
             }
         }
+        
         return false;
     }
 

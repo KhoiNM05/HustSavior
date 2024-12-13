@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.World;
 
+import io.github.HustSavior.Play;
 import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.SkillManager;
@@ -198,6 +199,7 @@ public class Player extends Sprite {
         float x = position.x * PPM - getWidth() / 2;
         float y = position.y * PPM - getHeight() / 2;
         setPosition(x, y + 12);  // Offset sprite up from feet position
+        super.draw(batch); 
         skillManager.drawSkills(batch);
         if (isDead) {
             deathTimer += Gdx.graphics.getDeltaTime();
@@ -218,7 +220,7 @@ public class Player extends Sprite {
             batch.setColor(1, 1, 1, 1); // Reset batch color
 
             if (startFading && fadeTimer >= FADE_DURATION) {
-                game.setScreen(new DeathScreen(game));
+                game.setScreen(new DeathScreen(game, game.getScreen()));
             }
             return;
         }
@@ -295,7 +297,23 @@ public class Player extends Sprite {
 
     // Add this method to limit maximum velocity
     public void update(float delta) {
-        if (isDead) return;
+        if (isDead) {
+            deathTimer += Gdx.graphics.getDeltaTime();
+            if (deathAnimation.isAnimationFinished(deathTimer) && !startFading) {
+                startFading = true;
+                fadeTimer = 0;
+            }
+
+            if (startFading) {
+                fadeTimer += Gdx.graphics.getDeltaTime();
+                if (fadeTimer >= FADE_DURATION) {
+                    // Only transition to death screen after fade completes
+                    game.setScreen(new DeathScreen(game, game.getScreen()));
+                    return;
+                }
+            }
+            return;
+        }
 
         // Only update position if there's actual velocity
         if (Math.abs(velocity.x) > 0.001f || Math.abs(velocity.y) > 0.001f) {
@@ -390,13 +408,12 @@ public class Player extends Sprite {
 
 
     public void takeDamage(float damage) {
-        if (!shieldActive) {
+        if (!shieldActive && !isDead) {
             health = Math.max(0, health - damage);
-            if (health <= 0 && !isDead) {
+            if (health <= 0) {
                 isDead = true;
-                deathTimer = 0;
-                // Load death animation with 3 frames
-                deathAnimation = createDeathAnimation();
+                ((Play)game.getScreen()).setGameOver();  // Freeze the game
+                game.setScreen(new DeathScreen(game, game.getScreen()));
             }
         }
     }

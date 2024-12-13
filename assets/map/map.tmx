@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="149" height="110" tilewidth="32" tileheight="32" infinite="0" nextlayerid="49" nextobjectid="211">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="149" height="110" tilewidth="32" tileheight="32" infinite="0" nextlayerid="49" nextobjectid="214">
  <tileset firstgid="1" name="BackGroundDimmed (Copy)" tilewidth="32" tileheight="32" tilecount="13625" columns="125">
   <image source="BackGroundDimmed (Copy).png" width="4000" height="3500"/>
  </tileset>
@@ -2605,7 +2605,7 @@
   </object>
  </objectgroup>
  <objectgroup id="42" name="spawning">
-  <object id="200" x="292" y="2428" width="2148" height="998"/>
+  <object id="200" x="313.333" y="3221.33" width="2126.67" height="204.667"/>
   <object id="201" x="1766" y="1532">
    <polygon points="0,0 -640,632 8,630 8,874 464,880 480,116 112,120"/>
   </object>
@@ -2613,6 +2613,9 @@
   <object id="203" x="3548" y="2098" width="404" height="1218"/>
   <object id="204" x="2464" y="3112" width="1066" height="308"/>
   <object id="205" x="3992" y="3232" width="372" height="186"/>
+  <object id="211" x="474.667" y="2546.67" width="85.3333" height="390.667"/>
+  <object id="212" x="1916" y="2774.67" width="273.333" height="425.333"/>
+  <object id="213" x="2044" y="2486.67" width="146.667" height="126.667"/>
  </objectgroup>
  <objectgroup id="20" name="Library_bounds">
   <properties>

@@ -87,6 +87,7 @@ public class MonsterPool {
             case 0: return new Skeleton(x, y);
             case 1: return new FlyingEye(x, y);
             case 2: return new Mushroom(x, y);
+            case 3: return new Goblin(x, y);
             default: return new Skeleton(x, y);
         }
     }

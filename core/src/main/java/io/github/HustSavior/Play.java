@@ -1,8 +1,6 @@
 package io.github.HustSavior;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
@@ -32,7 +30,7 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.TimeUtils;
+
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -44,14 +42,12 @@ import io.github.HustSavior.collision.CollisionListener;
 import io.github.HustSavior.dialog.DialogManager;
 import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
+
 import io.github.HustSavior.handlers.CollisionHandler;
 import io.github.HustSavior.input.InputHandler;
-import io.github.HustSavior.items.AlgebraBook;
 import io.github.HustSavior.items.AssetSetter;
-import io.github.HustSavior.items.CalcBook;
 import io.github.HustSavior.items.HPPotion;
 import io.github.HustSavior.items.Item;
-import io.github.HustSavior.items.PhysicBook;
 import io.github.HustSavior.items.Shield;
 import io.github.HustSavior.map.GameMap;
 import io.github.HustSavior.map.HighgroundManager;
@@ -60,13 +56,14 @@ import io.github.HustSavior.skills.Slash;
 import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.spawn.SpawnManager;
 import io.github.HustSavior.spawner.MonsterPool;
+import io.github.HustSavior.spawner.MonsterSpawnManager;
 import io.github.HustSavior.ui.GameTimer;
 import io.github.HustSavior.ui.InventoryTray;
 import io.github.HustSavior.ui.PauseButton;
 import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
 import io.github.HustSavior.utils.transparency.TreeTransparencyManager;
-
+import io.github.HustSavior.collision.TileCollision;
 public class Play implements Screen {
     private static final float PPM = GameConfig.PPM;
 //    private static final float INITIAL_ZOOM = -1.2f;
@@ -113,7 +110,7 @@ public class Play implements Screen {
     private LowgroundManager lowgroundManager;
     private GameTimer gameTimer;
     private InventoryTray inventoryTray;
-    private List<AbstractMonster> monsters = new ArrayList<>();
+    private TileCollision tileCollision;
 
     private Rectangle mapBounds;
     private MusicPlayer musicPlayer;
@@ -121,12 +118,12 @@ public class Play implements Screen {
     private long lastGCCheck = 0; // Add this field as well
     private long lastPerformanceLog = 0;
     private long lastCleanupTime = 0;
-
+    
     private final Game game;
 
     private CollisionHandler collisionHandler;
 
-    private final SpriteBatch batch;
+    private SpriteBatch batch;
 
     private static class ProfilerInfo {
         long physicsTime;
@@ -145,7 +142,7 @@ public class Play implements Screen {
     private final ProfilerInfo profiler = new ProfilerInfo();
     private float accumulator = 0;
 
-    private MonsterPool monsterPool;
+
     private float spawnTimer = 0;
     private static final float SPAWN_INTERVAL = 2f;
     private static final int SPAWN_COUNT = 2;
@@ -155,17 +152,44 @@ public class Play implements Screen {
 
     private float cleanupTimer = 0;
 
+    private Array<AbstractMonster> monsters;
+    private MonsterPool monsterPool;
+    private MonsterSpawnManager monsterSpawnManager;
+
+    private boolean isGameOver = false;
+    private boolean isDisposed = false;
+
     public Play(Game game) {
         this.game = game;
-        musicPlayer = MusicPlayer.getInstance();
+        this.batch = new SpriteBatch();
+        
+        // Initialize core components
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
+        
+        // Initialize world and map
+        world = setupWorld();
+        collisionBodyFactory = new CollisionBodyFactory(world, PPM);
+        gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
+        
+        // Initialize player
+        player = new Player(
+            new Sprite(new Texture("sprites/WalkRight1.png")),
+            450,    // x coordinate
+            500,    // y coordinate
+            world,
+            game,
+            gameMap.getTiledMap()
+        );
+        player.setCamera(camera);
+        
+        // Initialize bullet manager
+        bulletManager = new BulletManager(player, new ArrayList<>(), gameMap.getTiledMap());
+        
         // Set logging level to show debug messages
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
         // Initialize camera with proper starting position
-        camera = new OrthographicCamera();
-        viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
-        
-        // Force initial camera position and zoom
         camera.position.set(500f, 150f, 0f);
         camera.zoom = 0.5f;
         camera.update();
@@ -173,41 +197,16 @@ public class Play implements Screen {
         // Force viewport update immediately
         viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 
-        world = setupWorld();
-        collisionBodyFactory = new CollisionBodyFactory(world, PPM);
-        gameMap = new GameMap("map/map.tmx", collisionBodyFactory);
-        initializeMapBounds();
-
         // Initialize SpawnManager before loading items
         spawnManager = new SpawnManager(gameMap.getTiledMap());
 
         // Initialize highground manager
         highgroundManager = new HighgroundManager(gameMap.getTiledMap());
         // Initialize transparency manager
-        buildingTransparencyManager = new BuildingTransparencyManager(
-            world,
-            gameMap.getTiledMap(),
-            gameMap.getLayer("D3"),
-            gameMap.getLayer("D5"),
-            gameMap.getLayer("D35"),
-            gameMap.getLayer("Library"),
-            gameMap.getLayer("Roof"),
-            gameMap.getLayer("Parking")
-        );
         // Add tree transparency manager initialization
         treeTransparencyManager = new TreeTransparencyManager(world, gameMap.getTiledMap());
 
-        player = new Player(
-            new Sprite(new Texture("sprites/WalkRight1.png")),
-            450,    // x coordinate
-            500,    // y coordinate
-            world,
-            game,
-            gameMap.getTiledMap()  // Pass the TiledMap from gameMap
-        );
-        player.setCamera(camera);
-        inputHandler = new InputHandler(player);
-        bulletManager = new BulletManager(player, monsters);
+        inputHandler = new InputHandler(player, bulletManager);
         assetSetter = new AssetSetter();
         //skillManager = new SkillManager(player, world);
         //skillManager.activateSkills(1);
@@ -249,13 +248,28 @@ public class Play implements Screen {
         Skin inventorySkin = new Skin(Gdx.files.internal("UI/itemtray/itemtray.json"));
         inventoryTray = new InventoryTray(stage, inventorySkin);
 
-        // Initialize monster pool
-        monsterPool = new MonsterPool();
-        monsters = new ArrayList<>();
-    
-        collisionHandler = new CollisionHandler();
+        initMonsterSystem();
+        initializeMapBounds();
 
-        this.batch = new SpriteBatch();
+        // Initialize transparency managers with proper layers
+        buildingTransparencyManager = new BuildingTransparencyManager(
+            world,
+            gameMap.getTiledMap(),
+            gameMap.getLayer("D3"),
+            gameMap.getLayer("D5"),
+            gameMap.getLayer("D35"),
+            gameMap.getLayer("Library"),
+            gameMap.getLayer("Roof"),
+            gameMap.getLayer("Parking")
+        );
+
+        // Add tree transparency manager initialization
+        treeTransparencyManager = new TreeTransparencyManager(
+            world, 
+            gameMap.getTiledMap()
+        );
+
+
     }
 
 //    private OrthographicCamera setupCamera() {
@@ -317,6 +331,11 @@ public class Play implements Screen {
 
     @Override
     public void show() {
+        // Initialize basic components
+        world = setupWorld();
+        collisionBodyFactory = new CollisionBodyFactory(world, PPM);
+        
+        
         // Force camera position reset
         camera.position.set(500f, 150f, 0f);
         camera.zoom = 0.5f;
@@ -338,34 +357,96 @@ public class Play implements Screen {
         // Load map
         TiledMap map = new TmxMapLoader().load("map/map.tmx");
         player.initCollision(map);
-        spawnInitialMonsters();
+        tileCollision = new TileCollision(map);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        if (!isPaused) {
-            update(delta);
-            updateGame(delta);
-        }
-
-        camera.update();
+        if (isDisposed) return;
         
-        // Use drawGame instead of separate render calls
-        drawGame();
-        
-        checkCollisions();
-        dialogManager.update(delta);
-
-        if (stage != null) {
-            stage.act(delta);
-            stage.draw();
+        if (isGameOver) {
+            player.update(delta);
+            
+            Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+            
+            batch.begin();
+            player.draw(batch);
+            batch.end();
+            return;
         }
-        if (uiStage != null) {
-            uiStage.act(delta);
-            uiStage.draw();
+        if(gameMap != null) {
+            if (!isPaused) {
+                update(delta);
+                updateGame(delta);
+                if (monsters == null) {
+                    Gdx.app.log("Play", "Monsters array is null!");
+                    return;
+                }
+                // Debug each monster in the array
+                if(monsters != null) {
+                    for (int i = 0; i < monsters.size; i++) {
+                        AbstractMonster monster = monsters.get(i);
+                        if (monster != null) {
+                            
+                            
+                            monster.update(delta, player);
+                            
+                            
+                        } else {
+                            Gdx.app.debug("Play", "Monster[" + i + "] is null!");
+                        }
+                    }
+                }           
+                // Debug spawn system
+                spawnTimer += delta;
+                if (spawnTimer >= SPAWN_INTERVAL) {
+                    
+                    monsterSpawnManager.update(delta);  // Make sure this is called
+                    spawnTimer = 0;
+                    
+                   // Debug monster count after spawn attempt
+                    
+                }
+
+                // Single update location for monsters
+                for (AbstractMonster monster : monsters) {
+                    if (monster != null && monster.isAlive()) {
+                        monster.update(delta, player);
+                    }
+                }
+                
+                // Other updates
+               
+            }
+
+            camera.update();
+            
+            drawGame();
+            
+            checkCollisions();
+            dialogManager.update(delta);
+
+            if (stage != null) {
+                stage.act(delta);
+                stage.draw();
+            }
+            if (uiStage != null) {
+                uiStage.act(delta);
+                uiStage.draw();
+            }
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            
+            // Render collision bounds
+            tileCollision.renderDebug(shapeRenderer);
+            
+            // Render monster bounds
+            for (AbstractMonster monster : monsters) {
+                monster.renderDebug(shapeRenderer);
+            }
+            
+            shapeRenderer.end();
         }
     }
 
@@ -382,60 +463,47 @@ public class Play implements Screen {
 
    
     private void updateGame(float delta) {
-        profiler.reset();
-        
-        // Limit frame time to prevent spiral of death
         float frameTime = Math.min(delta, MAX_FRAME_TIME);
         accumulator += frameTime;
-        
-        long physicsStartTime = TimeUtils.nanoTime();
-        
-        // Physics simulation with fixed time step
         while (accumulator >= FIXED_TIME_STEP) {
-            long startTime = TimeUtils.nanoTime();
-            
-            // Step physics world
             world.step(FIXED_TIME_STEP, VELOCITY_ITERATIONS, POSITION_ITERATIONS);
-            profiler.physicsTime = TimeUtils.nanoTime() - startTime;
-            
             accumulator -= FIXED_TIME_STEP;
         }
-        
-        profiler.physicsUpdateTime = TimeUtils.nanoTime() - physicsStartTime;
-        
-        // Non-physics updates
-        long startTime = TimeUtils.nanoTime();
         inputHandler.update(delta);
-        profiler.inputTime = TimeUtils.nanoTime() - startTime;
-        
-        startTime = TimeUtils.nanoTime();
         updateCamera();
-        profiler.cameraTime = TimeUtils.nanoTime() - startTime;
-        
-        // Position updates - consolidated ground management here
-        startTime = TimeUtils.nanoTime();
         Vector2 currentPos = player.getPosition();
         if (currentPos != null) {
-            // First apply highground adjustments
             Vector2 adjustedPos = highgroundManager.getStepPosition(currentPos.x, currentPos.y);
             if (adjustedPos != null) {
-                // Then apply lowground adjustments to the already adjusted position
                 adjustedPos = lowgroundManager.updatePosition(adjustedPos.x, adjustedPos.y);
-                // Update player's world position with both adjustments
                 player.setWorldPosition(adjustedPos.x, adjustedPos.y);
             } else {
-                // If no highground adjustment, still check for lowground
                 Vector2 lowgroundPos = lowgroundManager.updatePosition(currentPos.x, currentPos.y);
                 player.setWorldPosition(lowgroundPos.x, lowgroundPos.y);
             }
         }
-        profiler.positionTime = TimeUtils.nanoTime() - startTime;
-        
-        // Update player
         player.update(delta);
-        
-        logPerformanceMetrics();
+
+        // // Debug transparency state
+        // if (gameMap != null && gameMap.getTiledMap() != null) {
+        //     for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
+        //         if (layer.getName().equals("D3") || 
+        //             layer.getName().equals("D5") || 
+        //             layer.getName().equals("D35") || 
+        //             layer.getName().equals("Library") || 
+        //             layer.getName().equals("Roof") || 
+        //             layer.getName().equals("Parking")) {
+                    
+        //             Gdx.app.debug("Play", String.format(
+        //                 "Layer %s opacity: %.2f",
+        //                 layer.getName(),
+        //                 layer.getOpacity()
+        //             ));
+        //         }
+        //     }
+        // }
     }
+
 
     private void logPerformanceMetrics() {
         Gdx.app.log("Profiler", String.format(
@@ -454,8 +522,7 @@ public class Play implements Screen {
     private void updateCamera() {
         // Get player position (now in pixels)
         Vector2 playerPos = player.getPosition();
-        if (playerPos == null || mapBounds == null) {
-            Gdx.app.error("Play", "Player position or map bounds is null!");
+        if (playerPos == null) {
             return;
         }
 
@@ -464,23 +531,29 @@ public class Play implements Screen {
         camera.position.x += (playerPos.x - camera.position.x) * lerp;
         camera.position.y += (playerPos.y - camera.position.y) * lerp;
 
-        // Clamp camera to map bounds with margin
-        float viewportHalfWidth = (camera.viewportWidth * camera.zoom) / 2;
-        float viewportHalfHeight = (camera.viewportHeight * camera.zoom) / 2;
-        float margin = 100f;
+        // Clamp camera to map bounds if needed
+        if (mapBounds != null) {
+            float viewportHalfWidth = (camera.viewportWidth * camera.zoom) / 2;
+            float viewportHalfHeight = (camera.viewportHeight * camera.zoom) / 2;
+            float margin = 100f;
 
-        camera.position.x = Math.max(viewportHalfWidth + margin, 
-            Math.min(mapBounds.width - viewportHalfWidth - margin, camera.position.x));
-        camera.position.y = Math.max(viewportHalfHeight + margin, 
-            Math.min(mapBounds.height - viewportHalfHeight - margin, camera.position.y));
+            camera.position.x = Math.max(viewportHalfWidth + margin, 
+                Math.min(mapBounds.width - viewportHalfWidth - margin, camera.position.x));
+            camera.position.y = Math.max(viewportHalfHeight + margin, 
+                Math.min(mapBounds.height - viewportHalfHeight - margin, camera.position.y));
+        }
 
         camera.update();
     }
 
     private void drawGame() {
+        if (isDisposed || gameMap == null || batch == null) return;
+
         OrthogonalTiledMapRenderer renderer = gameMap.getRenderer();
-        renderer.setView(camera);
-        
+        if (renderer == null) return;
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        renderer.setView(camera); 
         // Get camera frustum for culling
         float w = camera.viewportWidth * camera.zoom;
         float h = camera.viewportHeight * camera.zoom;
@@ -490,34 +563,49 @@ public class Play implements Screen {
             w,
             h
         );
-
         // Render first 3 layers
         int[] firstLayers = {0, 1, 2};
-        renderer.render(firstLayers);
-        
-        // Draw monsters
-        SpriteBatch batch = (SpriteBatch) renderer.getBatch();
+        renderer.render(firstLayers);        
+        // Draw monsters and player
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        for (AbstractMonster monster : monsters) {
-            if (isInView(monster.getPosition().x, monster.getPosition().y, viewBounds)) {
-                monster.render(batch);
+        if (monsters != null) {
+            for (AbstractMonster monster : monsters) {
+                if (monster != null) {
+                    monster.draw(batch);
+                }
             }
         }
-        batch.end();
         
-        // Render remaining layers
-        int[] remainingLayers = new int[gameMap.getTiledMap().getLayers().getCount() - 3];
-        for (int i = 3; i < gameMap.getTiledMap().getLayers().getCount(); i++) {
-            remainingLayers[i - 3] = i;
+        if (bulletManager != null) {
+            bulletManager.render(batch, viewBounds);
         }
-        renderer.render(remainingLayers);
-        
+        batch.end();    
+        if (buildingTransparencyManager != null && player != null) {
+            buildingTransparencyManager.update(player.getPosition());
+        }
+        if (treeTransparencyManager != null && player != null) {
+            treeTransparencyManager.update(player.getPosition());
+        }
+        // Render remaining layers
+        if (gameMap.getTiledMap() != null) {
+            int[] remainingLayers = new int[gameMap.getTiledMap().getLayers().getCount() - 3];
+            for (int i = 3; i < gameMap.getTiledMap().getLayers().getCount(); i++) {
+                remainingLayers[i - 3] = i;
+            }
+            renderer.render(remainingLayers);
+        }   
         // Draw other game objects
         batch.begin();
-        bulletManager.render(batch, viewBounds);
-        assetSetter.drawVisibleObjects(batch, viewBounds);
-        player.draw(batch);
+        
+        if (assetSetter != null) {
+            assetSetter.drawVisibleObjects(batch, viewBounds);
+        }
+        if (player != null) {
+            player.draw(batch);
+        }
         batch.end();
+     
     }
 
     private boolean isInView(float x, float y, Rectangle viewBounds) {
@@ -536,50 +624,55 @@ public class Play implements Screen {
 
     @Override
     public void dispose() {
-        batch.dispose();
+        isDisposed = true;
         // Dispose physics world and bodies first
         if (world != null) {
-            // Remove all bodies safely
-            Array<Body> bodies = new Array<>();
-            world.getBodies(bodies);
-            for (Body body : bodies) {
-                if (body != null) {
-                    world.destroyBody(body);
-                }
-            }
             world.dispose();
             world = null;
         }
 
-        // Dispose monsters
+        // Dispose monsters safely
         if (monsters != null) {
-            for (AbstractMonster monster : monsters) {
-                monsterPool.free(monster);
+            for (AbstractMonster monster : new Array.ArrayIterator<>(monsters)) {
+                if (monster != null) {
+                    monster.dispose();
+                }
             }
             monsters.clear();
+            monsters = null;
         }
 
-        // Dispose graphics resources
-        if (batch != null) batch.dispose();
-        if (gameMap != null) gameMap.dispose();
-        if (player != null && player.getTexture() != null) player.getTexture().dispose();
-        if (uiStage != null) uiStage.dispose();
-        if (shapeRenderer != null) shapeRenderer.dispose();
-        if (stage != null) stage.dispose();
-        if (gameTimer != null) gameTimer.dispose();
-        if (inventoryTray != null) inventoryTray.dispose();
-        if (musicPlayer != null) musicPlayer.dispose();
-        if (skin != null) skin.dispose();
-        if (bulletManager != null) bulletManager.dispose();
-        if (assetSetter != null) assetSetter.dispose();
-        if (dialogManager != null) dialogManager.dispose();
-        if (buildingTransparencyManager != null) buildingTransparencyManager.dispose();
-        if (treeTransparencyManager != null) treeTransparencyManager.dispose();
-        if (highgroundManager != null) highgroundManager.dispose();
-        if (lowgroundManager != null) lowgroundManager.dispose();
+        // Dispose graphics resources safely
+        if (batch != null) {
+            batch.dispose();
+            batch = null;
+        }
 
-        // Force garbage collection
-        cleanupUnusedResources();
+        // Dispose map resources
+        if (gameMap != null) {
+            gameMap.dispose();
+            gameMap = null;
+        }
+
+        // Dispose UI resources
+        if (stage != null) {
+            stage.dispose();
+            stage = null;
+        }
+        if (uiStage != null) {
+            uiStage.dispose();
+            uiStage = null;
+        }
+
+        // Dispose other resources
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+            shapeRenderer = null;
+        }
+        if (skin != null) {
+            skin.dispose();
+            skin = null;
+        }
     }
 
     @Override
@@ -626,9 +719,11 @@ public class Play implements Screen {
     }
 
     public void checkCollisions() {
+        if (gameMap == null) return;
+
         MapLayer warningsLayer = gameMap.getTiledMap().getLayers().get("warnings");
         if (warningsLayer == null) {
-            Gdx.app.error("Play", "Warnings layer not found!");
+            
             return;
         }
 
@@ -650,21 +745,15 @@ public class Play implements Screen {
             player.getHeight()
         );
 
-        // Debug log player position and bounds
-        Gdx.app.debug("Play", "Player position: " + playerX + ", " + playerY);
-        Gdx.app.debug("Play", "Player bounds: " + playerRect);
 
         for (MapObject object : warningsLayer.getObjects()) {
             if (object instanceof RectangleMapObject) {
                 Rectangle rect = ((RectangleMapObject) object).getRectangle();
                 
-                // Debug log warning area bounds
-                Gdx.app.debug("Play", "Warning area bounds: " + rect);
+                
                 
                 if (playerRect.overlaps(rect)) {
-                    Gdx.app.log("Play", "Collision detected with warning area!");
                     player.stopMovement();
-                    
                     // Make sure dialog is shown on the UI thread
                     Gdx.app.postRunnable(() -> {
                         dialogManager.showWarningDialog("Warning: Anh hen em pickleball", () -> {
@@ -711,33 +800,6 @@ public class Play implements Screen {
         }
     }
 
-    private String getItemName(Item item) {
-        if (item instanceof CalcBook) return "Calculus Book";
-        if (item instanceof AlgebraBook) return "Algebra Book";
-        if (item instanceof PhysicBook) return "Physics Book";
-        if (item instanceof HPPotion) return "Health Potion";
-        if (item instanceof Shield) return "Shield";
-        return "Unknown Item";
-    }
-
-    
-    
-
-    private void updateMonsters(float delta) {
-        // Update all monsters
-        for (AbstractMonster monster : monsters) {
-            monster.update(delta, player);
-            monster.render(batch);
-        }
-        
-        for (int i = monsters.size() - 1; i >= 0; i--) {
-            if (!monsters.get(i).isAlive()) {
-                AbstractMonster monster = monsters.remove(i);
-                monster.dispose();
-            }
-        }
-    }
-
     private void initializeMapBounds() {
         MapLayer boundsLayer = gameMap.getTiledMap().getLayers().get("map_bounds");
         if (boundsLayer != null) {
@@ -766,46 +828,78 @@ public class Play implements Screen {
         }
     }
 
+    private void initMonsterSystem() {
+        Gdx.app.debug("Play", "Initializing monster system");
+        monsters = new Array<AbstractMonster>(false, 16);
+        monsterPool = new MonsterPool();
+        monsterSpawnManager = new MonsterSpawnManager(
+            player,
+            monsters,  // Same array reference
+            camera,
+            gameMap.getTiledMap(),
+            monsterPool
+        );
+        Gdx.app.debug("Play", "Monster system initialized with array: " + monsters.toString());
+    }
+
     private void update(float delta) {
+        if (isDisposed || gameMap == null) return;      
         if (!isPaused) {
-            player.update(delta);
-            checkItemPickup();
-            updateCamera();
-            
-            // Add monster spawning/updating here
-            spawnTimer += delta;
-            if (spawnTimer >= SPAWN_INTERVAL) {
-                spawnMonster(MathUtils.random(100, 1000), MathUtils.random(100, 1000));
-                spawnTimer = 0;
+            // Update player
+            if (player != null) {
+                player.update(delta);
+                
+                // Get player position once
+               
+            }          
+            updateCamera();           
+            if (bulletManager != null) {
+                bulletManager.update(delta);
             }
+            if (monsterSpawnManager != null) {
+                monsterSpawnManager.update(delta);
+            }           
+            if (gameMap.getTiledMap() != null) {
+                MapLayer collisionLayer = gameMap.getTiledMap().getLayers().get("collisions");
+                if (collisionLayer != null) {
+                    // Debug collision layer
+                    
+                    for (MapObject object : collisionLayer.getObjects()) {
+                        if (object instanceof RectangleMapObject) {
+                            Rectangle rect = ((RectangleMapObject) object).getRectangle();
+                            // Scale rectangle if using PPM
+                            rect.x /= GameConfig.PPM;
+                            rect.y /= GameConfig.PPM;
+                            rect.width /= GameConfig.PPM;
+                            rect.height /= GameConfig.PPM;
+                            bulletManager.checkCollisions(rect);
+                        }
+                    }
+                } else {
+                    Gdx.app.debug("Play", "No collision layer found!");
+                }               
+                checkItemPickup();
+                updateCamera();               
+                if (!isPaused) {
             
-            // Update existing monsters
-            for (AbstractMonster monster : monsters) {
-                monster.update(delta);
-            }
-            
-            // Get player position in world coordinates
-            Vector2 playerPos = player.getPosition();
-            
-            if (playerPos != null) {
-                buildingTransparencyManager.update(playerPos);
-                treeTransparencyManager.update(playerPos);
-                // Update item visibility based on player position
-                assetSetter.updateItemVisibility(playerPos, gameMap.getTiledMap());
-            }
-            
-            cleanupMonsters();  // Clean up far away monsters
-            
-            // Periodic garbage collection
-            cleanupTimer += delta;
-            if (cleanupTimer >= CLEANUP_INTERVAL) {
-                cleanupUnusedResources();
-                cleanupTimer = 0;
+                    for (AbstractMonster monster : monsters) {
+                        monster.update(delta, player);
+                    }
+                }       
+               
+                // Periodic garbage collection
+                cleanupTimer += delta;
+                if (cleanupTimer >= CLEANUP_INTERVAL) {
+                    cleanupUnusedResources();
+                    cleanupTimer = 0;
+                }                            
             }
         }
     }
-
+    
     private void checkItemPickup() {
+        if (gameMap == null) return;
+
         Rectangle playerBounds = player.getBounds();
         for (Item item : assetSetter.getItems()) {
             if (!item.isCollected() && item.isVisible() && playerBounds.overlaps(item.getBounds())) {
@@ -831,40 +925,21 @@ public class Play implements Screen {
         }
     }
 
-    private void spawnInitialMonsters() {
-        spawnMonster(500, 300);  // First monster
-        spawnMonster(600, 400);  // Second monster
-        spawnMonster(700, 500);  // Third monster
+    public void setGameOver() {
+        isGameOver = true;
     }
 
-    private void spawnMonster(float x, float y) {
-        if (monsters.size() >= MAX_MONSTERS) {
-            return; // Don't spawn if at max capacity
-        }
-        
-        int monsterType = MathUtils.random(3);
-        AbstractMonster monster = monsterPool.obtain(monsterType, x, y);
-        if (monster != null) {
-            monster.initializeAnimations();
-            monsters.add(monster);
-        }
-    }
+    
 
-    private void cleanupMonsters() {
-        Vector2 playerPos = player.getPosition();
-        Iterator<AbstractMonster> iter = monsters.iterator();
-        
-        while (iter.hasNext()) {
-            AbstractMonster monster = iter.next();
-            // Remove monsters that are too far from player
-            if (Vector2.dst(playerPos.x, playerPos.y, 
-                monster.getPosition().x, monster.getPosition().y) > CLEANUP_DISTANCE) {
-                monsterPool.free(monster);
-                iter.remove();
-            }
-        }
-    }
+
+   
+
+    
+
+
+    
 }
+
 
 
 

@@ -16,7 +16,7 @@ import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.utils.GameConfig;
 
 public class DeathScreen implements Screen {
-    private final Game game;
+    private final HustSavior game;
     private Stage stage;
     private Texture background;
     private Skin skin;
@@ -28,6 +28,7 @@ public class DeathScreen implements Screen {
     private final OrthographicCamera camera;
     private final FitViewport viewport;
     private MusicPlayer musicPlayer;
+    private final Screen previousScreen;  // Store reference to Play screen
 
     private enum State {
         FADE_IN,
@@ -35,8 +36,9 @@ public class DeathScreen implements Screen {
         FADE_OUT
     }
 
-    public DeathScreen(Game game) {
-        this.game = game;
+    public DeathScreen(Game game, Screen previousScreen) {
+        this.game = (HustSavior) game;
+        this.previousScreen = previousScreen;
         
         camera = new OrthographicCamera();
         viewport = new FitViewport(GameConfig.GAME_WIDTH, GameConfig.GAME_HEIGHT, camera);
@@ -61,16 +63,16 @@ public class DeathScreen implements Screen {
         updateState();
         
         camera.update();
-        ((HustSavior)game).batch.setProjectionMatrix(camera.combined);
+        game.batch.setProjectionMatrix(camera.combined);
         
-        ((HustSavior)game).batch.begin();
-        ((HustSavior)game).batch.setColor(1, 1, 1, calculateAlpha());
-        ((HustSavior)game).batch.draw(background, 
+        game.batch.begin();
+        game.batch.setColor(1, 1, 1, calculateAlpha());
+        game.batch.draw(background, 
             0, 0,                           
             GameConfig.GAME_WIDTH,          
             GameConfig.GAME_HEIGHT);        
-        ((HustSavior)game).batch.setColor(1, 1, 1, 1);
-        ((HustSavior)game).batch.end();
+        game.batch.setColor(1, 1, 1, 1);
+        game.batch.end();
 
         stage.act(delta);
         stage.draw();
@@ -92,6 +94,9 @@ public class DeathScreen implements Screen {
                 break;
             case FADE_OUT:
                 if (fadeTimer >= FADE_OUT_DURATION) {
+                    if (previousScreen != null) {
+                        previousScreen.dispose();  // Clean up Play screen
+                    }
                     game.setScreen(new MainMenuScreen(game));
                 }
                 break;

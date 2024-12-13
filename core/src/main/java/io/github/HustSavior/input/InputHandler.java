@@ -4,6 +4,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.math.Vector2;
 
+import io.github.HustSavior.bullet.BulletManager;
 import io.github.HustSavior.entities.Player;
 
 public class InputHandler extends InputAdapter {
@@ -12,9 +13,11 @@ public class InputHandler extends InputAdapter {
     private boolean facingLeft;
     private float stateTime;
     private boolean dialogActive = false;
+    private BulletManager bulletManager;
 
-    public InputHandler(Player player) {
+    public InputHandler(Player player, BulletManager bulletManager) {
         this.player = player;
+        this.bulletManager = bulletManager;
     }
 
     public void setDialogActive(boolean active) {
@@ -29,15 +32,15 @@ public class InputHandler extends InputAdapter {
 
     @Override
     public boolean keyDown(int keycode) {
+        if (dialogActive) return false;
+        
         switch (keycode) {
             case Input.Keys.A:
                 left = true;
-                //press A -> facingLeft=true;
                 player.setFacingDirection(true);
                 break;
             case Input.Keys.D:
                 right = true;
-                //press D -> facingLeft=false;
                 player.setFacingDirection(false);
                 break;
             case Input.Keys.W:
@@ -45,6 +48,9 @@ public class InputHandler extends InputAdapter {
                 break;
             case Input.Keys.S:
                 down = true;
+                break;
+            case Input.Keys.SPACE:
+                bulletManager.shootBullet();
                 break;
         }
         return true;

@@ -35,15 +35,15 @@ public class LowgroundManager implements Disposable {
             if (object instanceof RectangleMapObject) {
                 Rectangle rect = ((RectangleMapObject) object).getRectangle();
                 lowgroundAreas.add(rect);
-                Gdx.app.log("LowgroundManager", "Added rectangle lowground: " + rect);
+             //   Gdx.app.log("LowgroundManager", "Added rectangle lowground: " + rect);
             } else if (object instanceof PolygonMapObject) {
                 Polygon poly = ((PolygonMapObject) object).getPolygon();
                 lowgroundAreas.add(poly);
-                Gdx.app.log("LowgroundManager", "Added polygon lowground");
+               // Gdx.app.log("LowgroundManager", "Added polygon lowground");
             }
         }
 
-        Gdx.app.log("LowgroundManager", "Total lowground areas loaded: " + lowgroundAreas.size);
+     //   Gdx.app.log("LowgroundManager", "Total lowground areas loaded: " + lowgroundAreas.size);
     }
 
     public Vector2 updatePosition(float x, float y) {
@@ -70,11 +70,11 @@ public class LowgroundManager implements Disposable {
         if (isInLowground && !wasInLowground) {
             position.x += LOWGROUND_OFFSET_X;
             position.y += LOWGROUND_OFFSET_Y;
-            Gdx.app.log("LowgroundManager", "Entering lowground! New position: " + position);
+           // Gdx.app.log("LowgroundManager", "Entering lowground! New position: " + position);
         } else if (!isInLowground && wasInLowground) {
             position.x -= LOWGROUND_OFFSET_X;
             position.y -= LOWGROUND_OFFSET_Y;
-            Gdx.app.log("LowgroundManager", "Leaving lowground! New position: " + position);
+         //   Gdx.app.log("LowgroundManager", "Leaving lowground! New position: " + position);
         }
 
         return position;

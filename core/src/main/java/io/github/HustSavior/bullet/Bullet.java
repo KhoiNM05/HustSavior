@@ -19,6 +19,7 @@ public class Bullet implements Disposable {
     private int collisionCount = 0;
     private static final float BULLET_SPEED = 300f; // Pixels per second
     private static final int MAX_COLLISIONS = 3;
+    private static final float BOUNCE_FACTOR = 1.0f; // Controls how much speed is retained after bounce
 
     public Bullet(float x, float y, float directionX, float directionY) {
         this.position = new Vector2(x, y);
@@ -53,11 +54,34 @@ public class Bullet implements Disposable {
         return active && collisionCount < MAX_COLLISIONS;
     }
 
-    public void handleCollision() {
+    public void handleCollision(boolean hitVertical) {
         collisionCount++;
+        
         if (collisionCount >= MAX_COLLISIONS) {
             active = false;
+            return;
         }
+        
+        // Store old velocity
+        Vector2 oldVel = velocity.cpy();
+        
+        // Reflect velocity and normalize speed
+        if (hitVertical) {
+            velocity.x = -oldVel.x;
+            velocity.nor().scl(BULLET_SPEED);
+            // Move bullet out of collision area more significantly
+            position.x += Math.signum(velocity.x) * width;
+        } else {
+            velocity.y = -oldVel.y;
+            velocity.nor().scl(BULLET_SPEED);
+            // Move bullet out of collision area more significantly
+            position.y += Math.signum(velocity.y) * height;
+        }
+        
+        active = true;
+        rotation = (float) Math.toDegrees(Math.atan2(velocity.y, velocity.x));
+        
+        Gdx.app.debug("Bullet", "Collision handled: pos=" + position + ", vel=" + velocity);
     }
 
     public void render(SpriteBatch batch) {
@@ -86,6 +110,18 @@ public class Bullet implements Disposable {
 
     public void incrementCollisionCount() {
         collisionCount++;
+    }
+
+    public float getWidth() {
+        return width;
+    }
+
+    public float getHeight() {
+        return height;
+    }
+
+    public Vector2 getVelocity() {
+        return velocity;
     }
 
     @Override

@@ -1,7 +1,10 @@
 package io.github.HustSavior.entities;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -9,7 +12,7 @@ import com.badlogic.gdx.math.Vector2;
 import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.map.HighgroundManager;
 import io.github.HustSavior.map.LowgroundManager;
-import static io.github.HustSavior.utils.GameConfig.PPM;
+import io.github.HustSavior.utils.GameConfig;
 
 public abstract class AbstractMonster {
     protected static final short COLLISION_LAYER_BITS = 0x0001;
@@ -32,8 +35,8 @@ public abstract class AbstractMonster {
     protected Vector2 position;
     protected Vector2 velocity;
     protected Rectangle bounds;
-    protected float width;
-    protected float height;
+    protected float width = 32f;  // Default width in pixels
+    protected float height = 32f; // Default height in pixels
     
     // Animation components
     protected Animation<TextureRegion> idleAnimation;
@@ -58,7 +61,8 @@ public abstract class AbstractMonster {
     
     // Add these constants at the top of the class
     protected static final float ATTACK_ANIMATION_DURATION = 2f; // Slower attack animation
-    protected static final float ATTACK_COOLDOWN = 2f; // Time between attacks
+    protected static final float DEFAULT_ATTACK_COOLDOWN = 2f;
+    protected float ATTACK_COOLDOWN = DEFAULT_ATTACK_COOLDOWN; // Time between attacks
     protected static final float STATE_TRANSITION_DELAY = 0.6f; // Delay between state changes
     protected float stateTransitionTimer = 0.5f;
     protected MonsterState nextState = null;
@@ -104,8 +108,9 @@ public abstract class AbstractMonster {
         return isTransparent;
     }
     
-    protected static final float DETECTION_RANGE = 8f;  // Default detection range
-    protected static final float ATTACK_RANGE = 0.8f;   // Reduced from 1.2f to 0.8f for closer attacks
+    protected float DETECTION_RANGE = 200f;  
+    protected float ATTACK_RANGE = 1f;     
+    protected float CHASE_SPEED = 300f;     
     
     // Abstract methods that must be implemented by specific monsters
     public abstract void initializeAnimations();
@@ -142,7 +147,19 @@ public abstract class AbstractMonster {
     protected void createBody(float x, float y) {
         position = new Vector2(x, y);
         velocity = new Vector2();
-        bounds = new Rectangle(x - width/2, y - height/2, width, height);
+        
+        bounds = new Rectangle(
+            x/GameConfig.PPM - width/(2*GameConfig.PPM), 
+            y/GameConfig.PPM - height/(2*GameConfig.PPM), 
+            width/GameConfig.PPM,    // Make sure width is not 0
+            height/GameConfig.PPM    // Make sure height is not 0
+        );
+        
+        // Debug the initial bounds
+        Gdx.app.debug("Monster", String.format(
+            "Created bounds: x=%.2f, y=%.2f, w=%.2f, h=%.2f",
+            bounds.x, bounds.y, bounds.width, bounds.height
+        ));
     }
     
     public boolean isAlive() {
@@ -159,12 +176,18 @@ public abstract class AbstractMonster {
     }
     
     // Getters
-    public Rectangle getBounds() { return new Rectangle(
-        position.x - bounds.width/2,
-        position.y - bounds.height/2,
-        bounds.width,
-        bounds.height
-    ); }
+    public Rectangle getBounds() {
+        if (bounds == null) {
+            Gdx.app.error("Monster", "Bounds is null in getBounds!");
+            return new Rectangle(0, 0, width/GameConfig.PPM, height/GameConfig.PPM);
+        }
+        return new Rectangle(
+            position.x/GameConfig.PPM - bounds.width/2,
+            position.y/GameConfig.PPM - bounds.height/2,
+            bounds.width,
+            bounds.height
+        );
+    }
     public float getHp() { return hp; }
     public float getAttack() { return attack; }
     
@@ -236,110 +259,102 @@ public abstract class AbstractMonster {
         this.tileCollision = tileCollision;
     }
     
+    // Add AI constants
+    protected static final float AI_UPDATE_INTERVAL = 0.25f;
+    protected float aiUpdateTimer = 0;
+    protected boolean isAggro = false;
+
+    protected static final float PPM = GameConfig.PPM;
+    
     public void update(float delta, Player player) {
-        if (!isAlive()) {
-            currentState = MonsterState.DEATH;
-            velocity.setZero();
+        if (!isAlive() || player == null) return;
+
+        // Update velocity (now includes collision checks)
+        updateVelocity(player, delta);
+
+        // Apply movement
+        position.x += velocity.x * delta;
+        position.y += velocity.y * delta;
+        updateBounds();
+
+        updateAnimation(delta);
+        updateTimers(delta);
+    }
+
+    private void updateBounds() {
+        if (bounds == null) {
+            Gdx.app.error("Monster", "Bounds is null!");
             return;
         }
 
-        // Update position based on velocity
-        position.add(velocity.x * delta, velocity.y * delta);
-        bounds.setPosition(position.x - width/2, position.y - height/2);
-        
-        updateAnimation(delta);
-    }
-    
-    protected boolean isPlayerInRange(Player player) {
-        float distance = Vector2.dst(
-            position.x, position.y,
-            player.getPosition().x, player.getPosition().y
+        // Update bounds position in world units
+        bounds.setPosition(
+            position.x/GameConfig.PPM - bounds.width/2,
+            position.y/GameConfig.PPM - bounds.height/2
         );
-        return distance <= DETECTION_RANGE * PPM;
     }
-    
-    private void updateTimers(float delta) {
-        attackTimer -= delta;
-        contactDamageTimer -= delta;
-    }
-    
-    private void handleStateTransition(float delta) {
-        stateTransitionTimer -= delta;
-        if (stateTransitionTimer <= 0 && nextState != null) {
-            currentState = nextState;
-            nextState = null;
-            stateTime = 0;
-        }
-    }
-    
-    private void handleAttack(Player player) {
-        // Only check for new attacks if not already attacking or finishing attack
-        if (currentState != MonsterState.ATTACKING && !isFinishingAttack) {
-            Vector2 toPlayer = player.getPosition().cpy().sub(position);
-            float distanceToPlayer = toPlayer.len();
 
-            if (distanceToPlayer <= DAMAGE_RADIUS && attackTimer <= 0) {
+    private void updateVelocity(Player player, float delta) {
+        Vector2 playerPos = player.getPosition();
+        Vector2 toPlayer = new Vector2(
+            playerPos.x - position.x,
+            playerPos.y - position.y
+        );
+        float distanceToPlayer = toPlayer.len();
+
+        if (distanceToPlayer <= DETECTION_RANGE) {
+            isAggro = true;
+            Vector2 direction = toPlayer.nor();
+            isFlipped = direction.x < 0;
+
+            if (distanceToPlayer <= ATTACK_RANGE && attackTimer <= 0) {
+                velocity.setZero();
                 changeState(MonsterState.ATTACKING);
-                isFinishingAttack = true;
-                stateTime = 0;
                 attackTimer = ATTACK_COOLDOWN;
                 player.takeDamage(attack);
+            } else if (currentState != MonsterState.ATTACKING) {
+                changeState(MonsterState.RUNNING);
+                
+                // Calculate potential new position
+                Vector2 desiredVelocity = direction.scl(CHASE_SPEED);
+                Rectangle testBounds = new Rectangle(
+                    (position.x + desiredVelocity.x * delta)/GameConfig.PPM - bounds.width/2,
+                    (position.y + desiredVelocity.y * delta)/GameConfig.PPM - bounds.height/2,
+                    bounds.width,
+                    bounds.height
+                );
+                
+                // If collision detected, stop. Otherwise, move towards player
+                if (tileCollision != null && tileCollision.collidesWith(testBounds)) {
+                    velocity.setZero();
+                } else {
+                    velocity.set(desiredVelocity);
+                }
             }
         } else {
-            // Keep monster completely stationary during attack
-            velocity.set(0, 0);
+            isAggro = false;
+            velocity.setZero();
+            changeState(MonsterState.IDLE);
         }
     }
-    
-    
-    public void onPlayerCollisionStart() {
-        isCollidingWithPlayer = true;
-    }
-    
-    public void onPlayerCollisionEnd() {
-        isCollidingWithPlayer = false;
-        if (currentState == MonsterState.ATTACKING) {
-            currentState = MonsterState.IDLE;
+
+    protected void updateTimers(float delta) {
+        if (attackTimer > 0) {
+            attackTimer -= delta;
         }
-    }
-    
-    public MonsterState getCurrentState() {
-        return currentState;
-    }
-    
-    // Add this new method to handle state changes
-    protected void changeState(MonsterState newState) {
-        if (currentState == newState) return;
         
-        // Complete current animation if it's an important state
-        if (currentState == MonsterState.ATTACKING || currentState == MonsterState.TAKE_HIT) {
-            nextState = newState;
-            stateTransitionTimer = STATE_TRANSITION_DELAY;
-        } else {
-            currentState = newState;
-            stateTime = 0;
+        if (pushRecoveryTimer > 0) {
+            pushRecoveryTimer -= delta;
         }
     }
-    
-    // Add method to handle being pushed
-    public void handlePush(Vector2 playerVelocity) {
-        if (currentState != MonsterState.ATTACKING && pushRecoveryTimer <= 0) {
-            Vector2 pushForce = playerVelocity.cpy().scl(PUSH_FORCE);
-            velocity.set(pushForce);
-            pushRecoveryTimer = PUSH_RECOVERY_TIME;
-        }
-    }
-    
+
    
-    
-    public void setMap(TiledMap map) {
-        this.map = map;
-    }
-    
     protected void updateAnimation(float delta) {
         stateTime += delta;
         
         if (currentState == MonsterState.ATTACKING) {
+            
+            
             if (stateTime >= attack1Animation.getAnimationDuration()) {
                 isFinishingAttack = false;
                 changeState(MonsterState.RUNNING);
@@ -375,12 +390,64 @@ public abstract class AbstractMonster {
         velocity.set(x, y);
     }
     
-    public void update(float delta) {
-        // Update position based on velocity
-        position.add(velocity.x * delta, velocity.y * delta);
-        bounds.setPosition(position.x, position.y);
-        
-        // Update animation
-        updateAnimation(delta);
+
+
+    protected void changeState(MonsterState newState) {
+        if (currentState != newState) {
+            Gdx.app.log("Monster", String.format(
+                "State Change: %s -> %s", 
+                currentState, 
+                newState
+            ));
+            currentState = newState;
+            stateTime = 0;
+        }
     }
+
+    public void handlePush(Vector2 pushVelocity) {
+        if (pushRecoveryTimer <= 0) {
+            velocity.add(pushVelocity);
+            pushRecoveryTimer = PUSH_RECOVERY_TIME;
+        }
+    }
+
+    // Add this getter method
+    public MonsterState getCurrentState() {
+        return currentState;
+    }
+
+    // Add this method to set monster size
+    protected void setSize(float width, float height) {
+        this.width = width;
+        this.height = height;
+        // Update bounds if they exist
+        if (bounds != null) {
+            bounds.setSize(width/GameConfig.PPM, height/GameConfig.PPM);
+        }
+    }
+
+    // Add this method to render debug bounds
+    public void renderDebug(ShapeRenderer shapeRenderer) {
+        if (bounds == null) return;
+        
+        // Save previous color
+        Color prevColor = shapeRenderer.getColor().cpy();
+        
+        // Draw monster bounds
+        shapeRenderer.setColor(Color.GREEN); // Green for monster bounds
+        Rectangle worldBounds = getBounds();
+        shapeRenderer.rect(
+            worldBounds.x * GameConfig.PPM,
+            worldBounds.y * GameConfig.PPM,
+            worldBounds.width * GameConfig.PPM,
+            worldBounds.height * GameConfig.PPM
+        );
+        
+    
+        
+        // Restore previous color
+        shapeRenderer.setColor(prevColor);
+    }
+
+   
 } 

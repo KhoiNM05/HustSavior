@@ -4,74 +4,34 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Vector2;
-
-import static io.github.HustSavior.utils.GameConfig.PPM;
 
 public class FlyingEye extends AbstractMonster {
-    private static final float ATTACK_RANGE = 0.1f;
-    private static final float DETECTION_RANGE = 10f;
-    private static final float ATTACK_COOLDOWN = 1.0f;
-    private static final float FLYING_EYE_SPEED = 1f;
-    private float attackTimer = 0;
-
     public FlyingEye(float x, float y) {
         this.hp = 60;
         this.attack = 10;
-        this.speed = FLYING_EYE_SPEED;
+        this.speed = 1.2f;
+        this.DETECTION_RANGE = 500f;
+        this.ATTACK_RANGE = 10f;
+        this.ATTACK_COOLDOWN = 1.0f;
+        this.CHASE_SPEED = 100f;
         this.currentState = MonsterState.IDLE;
+        
         createBody(x, y);
+        initializeAnimations();
     }
 
     @Override
     public void initializeAnimations() {
-        Texture idleSheet = new Texture("sprites/monster/Flying eye/Flight.png");
-        Texture attackSheet = new Texture("sprites/monster/Flying eye/Attack.png");
+        Texture flightSheet = new Texture("sprites/monster/Flying eye/Flight.png");
+        Texture attackSheet = new Texture("sprites/monster/Flying eye/Attack2.png");
         Texture hitSheet = new Texture("sprites/monster/Flying eye/Take Hit.png");
         Texture deathSheet = new Texture("sprites/monster/Flying eye/Death.png");
         
-        idleAnimation = createAnimation(idleSheet, 8, 0.1f);
-        runAnimation = idleAnimation; // Flying eye uses same animation for idle/run
+        idleAnimation = createAnimation(flightSheet, 8, 0.1f);
+        runAnimation = idleAnimation;
         attack1Animation = createAnimation(attackSheet, 8, 1.0f);
         takeHitAnimation = createAnimation(hitSheet, 4, 0.2f);
         deathAnimation = createAnimation(deathSheet, 4, 0.3f);
-    }
-
-    @Override
-    public void update(float delta, Player player) {
-        if (!isAlive()) {
-            currentState = MonsterState.DEATH;
-            return;
-        }
-
-        updateAnimation(delta);
-        attackTimer -= delta;
-
-        Vector2 playerPos = player.getPosition();
-        Vector2 monsterPos = position;
-        Vector2 direction = new Vector2(playerPos).sub(monsterPos);
-        float distance = direction.len();
-
-        isFlipped = direction.x < 0;
-
-        if (distance <= DETECTION_RANGE) {
-            direction.nor();
-            
-            if (distance <= ATTACK_RANGE) {
-                if (attackTimer <= 0) {
-                    currentState = MonsterState.ATTACKING;
-                    player.takeDamage(attack);
-                    attackTimer = ATTACK_COOLDOWN;
-                }
-                velocity.setZero();
-            } else {
-                currentState = MonsterState.RUNNING;
-                velocity.set(direction.x * speed, direction.y * speed);
-            }
-        } else {
-            currentState = MonsterState.IDLE;
-            velocity.setZero();
-        }
     }
 
     @Override
