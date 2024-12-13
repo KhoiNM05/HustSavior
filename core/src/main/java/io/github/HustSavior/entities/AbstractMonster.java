@@ -167,11 +167,27 @@ public abstract class AbstractMonster {
     }
     
     public void takeDamage(float damage) {
+        if (!isAlive()) return;
+        
+        // Apply damage
         hp -= damage;
+        Gdx.app.log("Monster", "Taking damage: " + damage + ", HP remaining: " + hp);
+        
+        // Handle state changes
         if (hp <= 0) {
-            changeState(MonsterState.DEATH);
+            hp = 0;
+            handleDeath();
         } else {
+            // Enter hit state and apply knockback
             changeState(MonsterState.TAKE_HIT);
+            stateTime = 0;
+            
+            // Apply knockback away from player
+            Vector2 knockbackDir = new Vector2(
+                position.x - player.getPosition().x,
+                position.y - player.getPosition().y
+            ).nor().scl(PUSH_FORCE * 2);  // Increased knockback force
+            handlePush(knockbackDir);
         }
     }
     
@@ -265,6 +281,12 @@ public abstract class AbstractMonster {
     protected boolean isAggro = false;
 
     protected static final float PPM = GameConfig.PPM;
+    
+    protected Player player;
+    
+    public AbstractMonster(Player player) {
+        this.player = player;
+    }
     
     public void update(float delta, Player player) {
         if (!isAlive() || player == null) return;
@@ -449,5 +471,19 @@ public abstract class AbstractMonster {
         shapeRenderer.setColor(prevColor);
     }
 
-   
+    protected void handleDeath() {
+        if (currentState != MonsterState.DEATH) {
+            changeState(MonsterState.DEATH);
+            velocity.setZero();
+            stateTime = 0;
+        }
+        
+        // Check if death animation is finished
+        if (deathAnimation != null && deathAnimation.isAnimationFinished(stateTime)) {
+            // Mark for removal
+            setVisible(false);
+            dispose();
+        }
+    }
+
 } 

@@ -5,7 +5,8 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class Skeleton extends AbstractMonster {
-    public Skeleton(float x, float y) {
+    public Skeleton(float x, float y, Player player) {
+        super(player);
         this.hp = 80;
         this.attack = 15;
         this.speed = 1f;

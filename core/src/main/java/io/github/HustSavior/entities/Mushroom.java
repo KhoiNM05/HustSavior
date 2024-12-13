@@ -5,7 +5,8 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class Mushroom extends AbstractMonster {
-    public Mushroom(float x, float y) {
+    public Mushroom(float x, float y, Player player) {
+        super(player);
         this.hp = 120;
         this.attack = 20;
         this.speed = 0.5f;

@@ -5,7 +5,8 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class Goblin extends AbstractMonster {
-    public Goblin(float x, float y) {
+    public Goblin(float x, float y, Player player) {
+        super(player);
         this.hp = 70;           // Medium health
         this.attack = 12;       // Medium attack
         this.speed = 1f;

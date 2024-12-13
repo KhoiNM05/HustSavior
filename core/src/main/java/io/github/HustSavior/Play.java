@@ -64,6 +64,7 @@ import io.github.HustSavior.utils.GameConfig;
 import io.github.HustSavior.utils.transparency.BuildingTransparencyManager;
 import io.github.HustSavior.utils.transparency.TreeTransparencyManager;
 import io.github.HustSavior.collision.TileCollision;
+import io.github.HustSavior.skills.SkillManager;
 public class Play implements Screen {
     private static final float PPM = GameConfig.PPM;
 //    private static final float INITIAL_ZOOM = -1.2f;
@@ -88,7 +89,7 @@ public class Play implements Screen {
     private BulletManager bulletManager;
     // Skill
     private final AssetSetter assetSetter;
-    //private final SkillManager skillManager;
+    private  SkillManager skillManager;
     private final InputHandler inputHandler;
     private  World world;
 
@@ -208,8 +209,8 @@ public class Play implements Screen {
 
         inputHandler = new InputHandler(player, bulletManager);
         assetSetter = new AssetSetter();
-        //skillManager = new SkillManager(player, world);
-        //skillManager.activateSkills(1);
+        skillManager = new SkillManager(player,world);
+        skillManager.activateSkills(1);
 
         // Load items after SpawnManager is initialized
         loadItems();
@@ -833,10 +834,10 @@ public class Play implements Screen {
     private void initMonsterSystem() {
         Gdx.app.debug("Play", "Initializing monster system");
         monsters = new Array<AbstractMonster>(false, 16);
-        monsterPool = new MonsterPool();
+        monsterPool = new MonsterPool(player);
         monsterSpawnManager = new MonsterSpawnManager(
             player,
-            monsters,  // Same array reference
+            monsters,
             camera,
             gameMap.getTiledMap(),
             monsterPool

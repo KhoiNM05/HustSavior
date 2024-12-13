@@ -5,15 +5,17 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
 import io.github.HustSavior.Play;
 import io.github.HustSavior.entities.AbstractMonster;
 import io.github.HustSavior.entities.Player;
+
+import io.github.HustSavior.utils.GameConfig;
 
 public class Slash extends Sprite implements Skills{
 
@@ -36,10 +38,14 @@ public class Slash extends Sprite implements Skills{
     private float castingX;
     private float castingY;
 
-    public Slash(Sprite sprite, Player player){
+    private Array<AbstractMonster> monsters;
+
+    public Slash(Sprite sprite, Player player, Array<AbstractMonster> monsters) {
         super(sprite);
         this.cd = new CooldownController(DEFAULT_COOLDOWN);
         this.player = player;
+        this.monsters = monsters;
+        cd.resetCooldown();
 
         setOriginCenter();
 
@@ -71,48 +77,72 @@ public class Slash extends Sprite implements Skills{
 
     }
 
-    @Override
-    public void draw(SpriteBatch batch){
-        super.draw(batch);
-    }
+  
+    
 
     @Override
     public void update(float delta) {
+        System.out.println("code go here");
         if (!isReady()) {
+            System.out.println("Not ready, cooldown active");
             cd.cooldownTimer(delta);
             return;
         }
 
         if (stateTime == 0) {  // Just activated
+            System.out.println("Initializing slash attack");
             hitMonsters.clear();
             if (isSoundLoaded) {
                 slashSound.play(1.0f);
             }
-            // Create slash bounds
+            // Create slash bounds based on player position and facing direction
+            boolean facingLeft = player.isFacingLeft();
             castingX = player.getPosition().x;
             castingY = player.getPosition().y;
+            
+            float slashWidth = getRegionWidth() / GameConfig.PPM;
+            float slashHeight = getRegionHeight() / GameConfig.PPM;
+            
+            if (facingLeft) {
+                castingX -= slashWidth;
+            }
+            
             slashBounds = new Rectangle(
-                castingX, 
-                castingY,
-                getRegionWidth(),
-                getRegionHeight()
+                castingX / GameConfig.PPM, 
+                castingY / GameConfig.PPM - slashHeight/2,
+                slashWidth,
+                slashHeight
             );
+            System.out.println("Created slash bounds: " + slashBounds);
         }
 
         stateTime += delta;
+        System.out.println("stateTime: " + stateTime);
+        System.out.println("animationTime: " + getAnimationTime);
         
         // During active frames of animation
         if (stateTime < getAnimationTime && slashBounds != null) {
-            // Get monsters from the world
-            for (AbstractMonster monster : ((Play)player.getScreen()).getMonsters()) {
-                if (!hitMonsters.contains(monster, true) && monster.getBounds().overlaps(slashBounds)) {
+            System.out.println("Checking for hits");
+            for (AbstractMonster monster : monsters) {
+                Rectangle monsterBounds = monster.getBounds();
+                System.out.println("Checking monster bounds: " + monsterBounds);
+                
+                if (!hitMonsters.contains(monster, true) && monsterBounds.overlaps(slashBounds)) {
+                    System.out.println("Hit detected!");
                     monster.takeDamage(SLASH_DAMAGE);
                     hitMonsters.add(monster);
+                    
+                    Vector2 knockbackDir = new Vector2(
+                        monster.getPosition().x - player.getPosition().x,
+                        monster.getPosition().y - player.getPosition().y
+                    ).nor();
+                    monster.handlePush(knockbackDir.scl(10f));
                 }
             }
         }
 
         if (stateTime >= getAnimationTime) {
+            System.out.println("Resetting slash");
             cd.resetCooldown();
             slashBounds = null;
             stateTime = 0;
@@ -139,5 +169,33 @@ public class Slash extends Sprite implements Skills{
     @Override
     public CooldownController getCooldown() {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void draw(SpriteBatch batch) {
+        if (stateTime < getAnimationTime) {
+            TextureRegion currentFrame = cast.getKeyFrame(stateTime, false);
+            
+            boolean facingLeft = player.isFacingLeft();
+            float x = castingX;
+            
+            if (facingLeft) {
+                // Flip texture if player faces left
+                currentFrame.flip(true, false);
+                x -= getWidth();  // Adjust position for left facing
+            }
+            
+            batch.draw(currentFrame, 
+                x, 
+                castingY,
+                getWidth(),
+                getHeight()
+            );
+            
+            // Reset flip for next frame
+            if (facingLeft) {
+                currentFrame.flip(true, false);
+            }
+        }
     }
 }

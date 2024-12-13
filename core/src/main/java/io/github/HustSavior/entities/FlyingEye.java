@@ -6,7 +6,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class FlyingEye extends AbstractMonster {
-    public FlyingEye(float x, float y) {
+    public FlyingEye(float x, float y, Player player) {
+        super(player);
         this.hp = 60;
         this.attack = 10;
         this.speed = 1.2f;
