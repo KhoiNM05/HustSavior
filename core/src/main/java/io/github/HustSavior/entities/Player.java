@@ -230,14 +230,14 @@ public class Player extends Sprite {
         }
         Color oldColor = batch.getColor();
         float finalAlpha = alpha;
-
-        // If shield is active, use shield alpha instead
-        if (shieldActive) {
-            finalAlpha = SHIELD_ALPHA;
-        }
-
-        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
-        batch.setColor(oldColor);
+//
+//        // If shield is active, use shield alpha instead
+//        if (shieldActive) {
+//            finalAlpha = SHIELD_ALPHA;
+//        }
+//
+//        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
+//        batch.setColor(oldColor);
 
 //        if (shieldActive) {
 //            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
@@ -394,23 +394,23 @@ public class Player extends Sprite {
     }
 
 
-    private void loadShieldAnimation() {
-        // Load all shield frames into array
-        shieldFrames = new TextureRegion[4];
-        for (int i = 0; i < 4; i++) {
-            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
-            shieldFrames[i] = new TextureRegion(texture);
-            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
-        }
-        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
-        shieldStateTime = 0;
-    }
+//    private void loadShieldAnimation() {
+//        // Load all shield frames into array
+//        shieldFrames = new TextureRegion[4];
+//        for (int i = 0; i < 4; i++) {
+//            Texture texture = new Texture(Gdx.files.internal("item/shield_effects/shield_effect_" + (i + 1) + ".png"));
+//            shieldFrames[i] = new TextureRegion(texture);
+//            Gdx.app.log("Shield", "Loaded shield frame " + (i + 1));
+//        }
+//        shieldAnimation = new Animation<>(SHIELD_ANIMATION_FRAME_DURATION, shieldFrames);
+//        shieldStateTime = 0;
+//    }
 
-    public void activateShield() {
-        shieldActive = true;
-        shieldTimeRemaining = SHIELD_DURATION;
-        shieldStateTime = 0;
-    }
+    //public void activateShield() {
+        //shieldActive = true;
+        //shieldTimeRemaining = SHIELD_DURATION;
+        //shieldStateTime = 0;
+    //}
 
 
     public void takeDamage(float damage) {

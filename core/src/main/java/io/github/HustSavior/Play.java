@@ -791,11 +791,6 @@ public class Play implements Screen {
                 fixture.setSensor(true);
                 player.acquireEffect(item.getId());
                 assetSetter.objectAcquired(item);
-                if (item instanceof HPPotion) {
-                    player.heal(50);
-                } else if (item instanceof Shield) {
-                    player.activateShield();
-                }
                 inventoryTray.addItem(item.getImagePath());
                 inputHandler.setDialogActive(false);
             });

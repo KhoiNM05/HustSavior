@@ -23,6 +23,7 @@ public class Slash extends Sprite implements Skills{
     final static float DEFAULT_COOLDOWN=2.0f;
     private float stateTime=0;
     private float getAnimationTime;
+    private boolean isFacingLeft;
 
     private Player player;
 
@@ -89,8 +90,17 @@ public class Slash extends Sprite implements Skills{
                 slashSound.play(1.0f);
             }
             // Create slash bounds
-            castingX = player.getPosition().x;
-            castingY = player.getPosition().y;
+
+            // check if this cast turns left or right
+            isFacingLeft= player.isFacingLeft();
+            // change location of slash sprite depending on whether the skill is cast to the left
+            //or the right
+
+            if (player.isFacingLeft()) castingX = player.getX()-getRegionWidth();
+            else castingX=player.getX()+player.getRegionWidth();
+            //Align slash sprite with player sprite
+            castingY = player.getY()+(player.getRegionHeight()-getRegionHeight())/2f;
+            //slash bounds
             slashBounds = new Rectangle(
                 castingX,
                 castingY,
@@ -98,6 +108,15 @@ public class Slash extends Sprite implements Skills{
                 getRegionHeight()
             );
         }
+
+        TextureRegion currFrame=cast.getKeyFrame(stateTime, false);
+        if (isFacingLeft && !isFlipX()){
+            currFrame.flip(true, false);
+        }
+        else if(!isFacingLeft && isFlipX()){
+            currFrame.flip(true, false);
+        }
+        setRegion(currFrame);
 
         stateTime += delta;
 
@@ -115,6 +134,7 @@ public class Slash extends Sprite implements Skills{
         if (stateTime >= getAnimationTime) {
             cd.resetCooldown();
             slashBounds = null;
+            if(isFlipX()) currFrame.flip(true, false);
             stateTime = 0;
         }
     }
