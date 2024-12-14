@@ -18,6 +18,7 @@ import io.github.HustSavior.Play;
 import io.github.HustSavior.collision.TileCollision;
 import io.github.HustSavior.screen.DeathScreen;
 import io.github.HustSavior.skills.SkillManager;
+import io.github.HustSavior.sound.MusicPlayer;
 import io.github.HustSavior.utils.GameConfig;
 
 public class Player extends Sprite {
@@ -34,9 +35,10 @@ public class Player extends Sprite {
 
     private float health;
     private float maxHealth;
-    private float xp;
-    private float maxXp;
+    private static float xp;
+    private static float maxXp;
     private float SPEED = 200f;
+    private static int level = 1;
 
     public final Animation<TextureRegion> walkLeft = new Animation<>(ANIMATION_SPEED,
         new TextureRegion(new Texture("sprites/WalkLeft1.png")),
@@ -57,9 +59,9 @@ public class Player extends Sprite {
     private static final float HEALTH_BAR_OFFSET_X = 6.5f;
     private static final float HEALTH_BAR_OFFSET_Y = 37f;
     private Texture xpBarTexture;
-    private static final float XP_BAR_WIDTH = 750f;
+    private static final float XP_BAR_WIDTH = 330f;
     private static final float XP_BAR_HEIGHT = 10f;
-    private static final float XP_BAR_OFFSET_Y = 15f;
+    private static final float XP_BAR_OFFSET_Y = 220f;
     // Shield
     private static final float SHIELD_ANIMATION_FRAME_DURATION = 0.1f; // Controls animation speed
     private Animation<TextureRegion> shieldAnimation;
@@ -120,7 +122,7 @@ public class Player extends Sprite {
 
     private float defense = 10f;
     private float attack = 10f;
-  
+
 
     public Player(Sprite sprite, float x, float y, World world, Game game, TiledMap tiledMap) {
         super(sprite);
@@ -153,8 +155,8 @@ public class Player extends Sprite {
         setPosition(x - width/2, y - height/2);
 
         // Initialize other components
-        this.health = 100;
-        this.maxHealth = 100;
+        this.health = 10000;
+        this.maxHealth = 10000;
         this.xp = 0;
         this.maxXp = 100;
         healthBarTexture = new Texture("HP & XP/health_bar.png");
@@ -191,6 +193,19 @@ public class Player extends Sprite {
 
     public float getMaxXp() {
         return maxXp;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public static void addXP(float amount) {
+        xp += amount;
+        while (xp >= maxXp) {
+            xp -= maxXp;
+            maxXp *= 1.5f; // Increase XP required for next level
+            levelUp();
+        }
     }
 
     private Animation<TextureRegion> createAnimation(String basePath) {
@@ -238,14 +253,14 @@ public class Player extends Sprite {
         }
         Color oldColor = batch.getColor();
         float finalAlpha = alpha;
-//
-//        // If shield is active, use shield alpha instead
-//        if (shieldActive) {
-//            finalAlpha = SHIELD_ALPHA;
-//        }
-//
-//        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
-//        batch.setColor(oldColor);
+
+        // If shield is active, use shield alpha instead
+        if (shieldActive) {
+            finalAlpha = SHIELD_ALPHA;
+        }
+
+        batch.setColor(oldColor.r, oldColor.g, oldColor.b, finalAlpha);
+        batch.setColor(oldColor);
 
 //        if (shieldActive) {
 //            shieldStateTime += Gdx.graphics.getDeltaTime(); // Update state time here instead of update method
@@ -624,5 +639,10 @@ public class Player extends Sprite {
 
     public boolean isAlive() {
         return health > 0;
+    }
+
+    public static void levelUp() {
+        level++;
+        System.out.println("Player leveled up to level " + level);
     }
 }
