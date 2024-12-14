@@ -339,7 +339,7 @@ public abstract class AbstractMonster {
             Gdx.app.error("Monster", "Player reference is null!");
             return;
         }
-        System.out.println(position);
+       
 
         Vector2 playerPos = player.getPosition();
         Vector2 toPlayer = new Vector2(
@@ -347,7 +347,7 @@ public abstract class AbstractMonster {
             playerPos.y - position.y
         );
         float distanceToPlayer = toPlayer.len();
-        System.out.println(distanceToPlayer);
+ 
         if (distanceToPlayer <= DETECTION_RANGE) {
             isAggro = true;
             Vector2 direction = toPlayer.nor();

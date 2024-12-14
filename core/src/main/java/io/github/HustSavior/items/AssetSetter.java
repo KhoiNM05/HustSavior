@@ -53,7 +53,7 @@ public class AssetSetter implements Disposable {
         if (newItem != null) {
             newItem.setVisible(true);  // Ensure item starts visible
             objectList.add(newItem);
-            System.out.println("Item created successfully. Total items: " + objectList.size());
+            System.out.println("Added item to list. New size: " + objectList.size());
         } else {
             System.out.println("Failed to create item with ID: " + id);
         }
@@ -71,12 +71,10 @@ public class AssetSetter implements Disposable {
     public void drawVisibleObjects(SpriteBatch batch, Rectangle viewBounds) {
         System.out.println("Drawing items. Total items: " + objectList.size());
         for (Item item : objectList) {
-            if (!item.isCollected() && item.isVisible()) {
-                System.out.println("Drawing item at: " + item.getX() + "," + item.getY() + 
-                                 " Visible: " + item.isVisible() + 
-                                 " Collected: " + item.isCollected());
-                item.draw(batch);
-            }
+            System.out.println("Item position: " + item.getX() + "," + item.getY() + 
+                             " Visible: " + item.isVisible() + 
+                             " Collected: " + item.isCollected());
+            item.draw(batch);  // Draw regardless of visibility for testing
         }
     }
 
@@ -142,4 +140,9 @@ public class AssetSetter implements Disposable {
         }
         objectList.clear();
     }
+
+    public List<Item> getObjectList() {
+        return objectList;
+    }
 }
+    

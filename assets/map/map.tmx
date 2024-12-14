@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="149" height="110" tilewidth="32" tileheight="32" infinite="0" nextlayerid="49" nextobjectid="214">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="149" height="110" tilewidth="32" tileheight="32" infinite="0" nextlayerid="49" nextobjectid="219">
  <tileset firstgid="1" name="BackGroundDimmed (Copy)" tilewidth="32" tileheight="32" tilecount="13625" columns="125">
   <image source="BackGroundDimmed (Copy).png" width="4000" height="3500"/>
  </tileset>
@@ -2616,6 +2616,34 @@
   <object id="211" x="474.667" y="2546.67" width="85.3333" height="390.667"/>
   <object id="212" x="1916" y="2774.67" width="273.333" height="425.333"/>
   <object id="213" x="2044" y="2486.67" width="146.667" height="126.667"/>
+  <object id="214" x="645.5" y="3247" width="304" height="115.5">
+   <properties>
+    <property name="type" value="calcbook"/>
+   </properties>
+  </object>
+  <object id="215" x="2037" y="2915.5" width="80" height="101.5">
+   <properties>
+    <property name="algebrabook" value=""/>
+    <property name="type" value="algebrabook"/>
+   </properties>
+  </object>
+  <object id="216" x="1871.5" y="2038.5" width="101.5" height="107">
+   <properties>
+    <property name="physicbook" value=""/>
+    <property name="type" value="physicbook"/>
+   </properties>
+  </object>
+  <object id="217" x="2911" y="1664" width="67.5" height="81">
+   <properties>
+    <property name="type" value="hppotion"/>
+   </properties>
+  </object>
+  <object id="218" x="3687.26" y="2159.16" width="68" height="100" rotation="359.725">
+   <properties>
+    <property name="shield" value=""/>
+    <property name="type" value="shield"/>
+   </properties>
+  </object>
  </objectgroup>
  <objectgroup id="20" name="Library_bounds">
   <properties>

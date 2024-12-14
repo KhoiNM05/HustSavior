@@ -24,7 +24,7 @@ import io.github.HustSavior.utils.GameConfig;
 public class Player extends Sprite {
     private static final float PPM = GameConfig.PPM;
     private static final float ANIMATION_SPEED = 50f;
-    private static final float MOVEMENT_SPEED = 70f;
+    private static final float MOVEMENT_SPEED = 200f;
     private static final float COLLISION_RADIUS = 8f;
 
     private static final float SHIELD_DURATION = 10f; // 10 seconds shield duration

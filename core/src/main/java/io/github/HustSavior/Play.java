@@ -164,7 +164,7 @@ public class Play implements Screen {
     private boolean isGameOver = false;
     private boolean isDisposed = false;
 
-    private static final float ITEM_SPAWN_INTERVAL = 10f; // Spawn every 10 seconds
+    private static final float ITEM_SPAWN_INTERVAL = 5f; // Spawn every 10 seconds
     private float itemSpawnTimer = 0f;
     private Array<SpawnPoint> spawnPoints;
 
@@ -392,6 +392,7 @@ public class Play implements Screen {
         assetSetter.createObject(300, 300, 3);
         assetSetter.createObject(250, 250, 4);
         assetSetter.createObject(400, 250, 5);
+        System.out.println("loadItems: Created " + assetSetter.getObjectList().size() + " items");
     }
 
     @Override
@@ -518,6 +519,9 @@ public class Play implements Screen {
            // shapeRenderer.end();
         }
 
+        batch.begin();
+        assetSetter.drawVisibleObjects(batch, getViewBounds());  // Make sure this is called
+        batch.end();
 
     }
 
@@ -1109,23 +1113,36 @@ public class Play implements Screen {
     }
 
     private void initItems() {
-        System.out.println("Initializing items...");
+        System.out.println("Starting initItems...");
         assetSetter = new AssetSetter();
 
-        // Get the spawning layer from the map
-        MapLayer spawnLayer = gameMap.getTiledMap().getLayers().get("spawning_layer");
+        // Print all layers in the map
+        for (MapLayer layer : gameMap.getTiledMap().getLayers()) {
+            System.out.println("Found layer: " + layer.getName());
+        }
+
+        MapLayer spawnLayer = gameMap.getTiledMap().getLayers().get("spawning");
         if (spawnLayer != null) {
+            System.out.println("Found spawning layer with " + spawnLayer.getObjects().getCount() + " objects");
+            
             for (MapObject object : spawnLayer.getObjects()) {
                 if (object instanceof RectangleMapObject) {
                     Rectangle rect = ((RectangleMapObject) object).getRectangle();
                     String type = object.getProperties().get("type", String.class);
+                    
+                    System.out.println("Processing object - Type: " + type + " at: " + rect.x + "," + rect.y);
+                    
+                    if (type == null) {
+                        System.out.println("Warning: Found object without type property at " + rect.x + "," + rect.y);
+                        continue;
+                    }
 
-                    // Convert coordinates to world units
                     int x = (int) rect.x;
                     int y = (int) rect.y;
 
-                    // Spawn different items based on type property
-                    switch (type) {
+                    System.out.println("Processing item: type=" + type + " at x=" + x + ", y=" + y);
+
+                    switch (type.toLowerCase()) {
                         case "calcbook":
                             assetSetter.createObject(x, y, 1);
                             break;
@@ -1146,7 +1163,7 @@ public class Play implements Screen {
                 }
             }
         } else {
-            System.out.println("Warning: spawning_layer not found in map");
+            System.out.println("ERROR: Spawning layer not found!");
         }
     }
 
