@@ -2613,7 +2613,11 @@
   <object id="203" x="3548" y="2098" width="404" height="1218"/>
   <object id="204" x="2464" y="3112" width="1066" height="308"/>
   <object id="205" x="3992" y="3232" width="372" height="186"/>
-  <object id="211" x="474.667" y="2546.67" width="85.3333" height="390.667"/>
+  <object id="211" x="474.667" y="2546.67" width="85.3333" height="390.667">
+   <properties>
+    <property name="type" value="calcbook"/>
+   </properties>
+  </object>
   <object id="212" x="1916" y="2774.67" width="273.333" height="425.333"/>
   <object id="213" x="2044" y="2486.67" width="146.667" height="126.667"/>
   <object id="214" x="645.5" y="3247" width="304" height="115.5">

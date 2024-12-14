@@ -9,11 +9,11 @@ public class Mushroom extends AbstractMonster {
         super(player);
         this.hp = 120;
         this.attack = 20;
-        this.speed = 0.5f;
+        this.speed = 0.3f;
         this.DETECTION_RANGE = 400f;
         this.ATTACK_RANGE = 40f;
         this.ATTACK_COOLDOWN = 2.0f;
-        this.CHASE_SPEED = 60f;
+        this.CHASE_SPEED = 50f;
         this.currentState = MonsterState.IDLE;
         
         createBody(x, y);
