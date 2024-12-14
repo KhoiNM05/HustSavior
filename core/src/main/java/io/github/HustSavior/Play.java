@@ -8,13 +8,11 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
@@ -30,6 +28,7 @@ import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
 
@@ -84,6 +83,8 @@ public class Play implements Screen {
     private static final float CLEANUP_INTERVAL = 5000f; // 5 seconds
     private static final float FIXED_TIME_STEP = 1/60f;
     private static final float MAX_FRAME_TIME = 0.25f;
+    private static final float LEVEL_UP_INTERVAL = 30f; // 30 seconds
+    private float levelUpTimer = 0f;
 
     private final OrthographicCamera camera;
     private final Viewport viewport;
@@ -157,7 +158,7 @@ public class Play implements Screen {
     private float cleanupTimer = 0;
 
     private Array<AbstractMonster> monsters;
-   
+
     private MonsterSpawnManager monsterSpawnManager;
 
     private boolean isGameOver = false;
@@ -186,11 +187,13 @@ public class Play implements Screen {
     private static final float INFECTION_TICK = 1f; // Damage every second
     private boolean isInfected = false;
     private float infectionTimer = 0f;
+    // Declare the level label
+    private Label levelLabel;
 
     public Play(Game game) {
         // Set debug level at the very start
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
-        
+
         this.game = game;
         this.batch = new SpriteBatch();
 
@@ -300,6 +303,20 @@ public class Play implements Screen {
             gameMap.getTiledMap()
         );
 
+        // Initialize the level label
+        Label.LabelStyle labelStyle = new Label.LabelStyle();
+        BitmapFont font = new BitmapFont(); // You can use an existing font from your skin
+        font.getData().setScale(1.5f); // Set font size
+        labelStyle.font = font;
+        labelStyle.fontColor = Color.GOLDENROD;
+        levelLabel = new Label("Level: " + player.getLevel(), labelStyle);
+
+        // Position the level label (e.g., top-left corner)
+        levelLabel.setPosition(20, GameConfig.GAME_HEIGHT + 100); // Adjust coordinates as needed
+
+        // Add the label to the UI stage
+        uiStage.addActor(levelLabel);
+
         // monsterSpawnManager = new MonsterSpawnManager(player, monsters, camera, gameMap);
         // MonsterPool.setInstance(monsterPool);
 
@@ -331,14 +348,22 @@ public class Play implements Screen {
             bullet.incrementCollisionCount();
             if (fixtureB.getBody().getUserData() instanceof AbstractMonster) {
                 AbstractMonster monster = (AbstractMonster) fixtureB.getBody().getUserData();
+                boolean wasAlive = monster.isAlive();  // Check if monster was alive before damage
                 monster.takeDamage(10); // Adjust damage value as needed
+                if (wasAlive && !monster.isAlive()) {  // Check if monster died from this hit
+                    Player.addXP(monster.getBaseXP());  // Add XP when monster dies from bullet
+                }
             }
         } else if (fixtureB.getBody().getUserData() instanceof Bullet) {
             Bullet bullet = (Bullet) fixtureB.getBody().getUserData();
             bullet.incrementCollisionCount();
             if (fixtureA.getBody().getUserData() instanceof AbstractMonster) {
                 AbstractMonster monster = (AbstractMonster) fixtureA.getBody().getUserData();
-                monster.takeDamage(10); // Adjust damage value as needed
+                boolean wasAlive = monster.isAlive();
+                monster.takeDamage(10);
+                if (wasAlive && !monster.isAlive()) {
+                    Player.addXP(monster.getBaseXP());
+                }
             }
         }
     }
@@ -362,7 +387,7 @@ public class Play implements Screen {
 
 
     private void loadItems() {
-        assetSetter.createObject(500, 500, 1);
+        assetSetter.createObject(100, 100, 1);
         assetSetter.createObject(400, 400, 2);
         assetSetter.createObject(300, 300, 3);
         assetSetter.createObject(250, 250, 4);
@@ -430,7 +455,7 @@ public class Play implements Screen {
                         AbstractMonster monster = monsters.get(i);
                         if (monster != null) {
 
-                    
+
                             monster.update(delta, player);
 
 
@@ -453,12 +478,14 @@ public class Play implements Screen {
                 // Single update location for monsters
                 for (AbstractMonster monster : monsters) {
                     if (monster != null && monster.isAlive()) {
-                      
+
                         monster.update(delta, player);
                     }
                 }
 
                 // Other updates
+                // Update the level label
+                levelLabel.setText("Level " + player.getLevel());
 
             }
 
@@ -491,7 +518,7 @@ public class Play implements Screen {
            // shapeRenderer.end();
         }
 
-        
+
     }
 
     private Rectangle getViewBounds() {
@@ -681,6 +708,7 @@ public class Play implements Screen {
             monsters.clear();
             monsters = null;
         }
+        levelLabel.getStyle().font.dispose();
 
         // Dispose graphics resources safely
         if (batch != null) {
@@ -866,38 +894,38 @@ public class Play implements Screen {
     private void initMonsterSystem() {
         System.out.println("Initializing monster system...");
         monsters = new Array<AbstractMonster>(false, 16);
-        
+
         // Initialize MonsterSpawnManager with required parameters
         monsterSpawnManager = new MonsterSpawnManager(
-            player, 
+            player,
             monsters,  // Pass the monsters array reference
-            camera, 
+            camera,
             gameMap.getTiledMap()
         );
-        
+
         // Add initial monsters
         for (int i = 0; i < 3; i++) {  // Start with 3 monsters
             monsterSpawnManager.trySpawnMonster();
         }
-        
+
         System.out.println("Monster system initialized. Initial count: " + monsters.size);
     }
 
     private void update(float delta) {
         if (isDisposed || gameMap == null) return;
-        
+
         // Check for player death before any other updates
         if (player != null && !player.isAlive()) {
             setGameOver();
             return;
         }
-        
+
         // Rest of your existing update logic...
         if (gameTimer != null) {
             gameTimer.update(delta, dialogManager.isDialogActive());
             updateInfectionStatus(delta);
         }
-        
+
         // Only update game logic if no dialog is active and game is not paused
         if (!isPaused && !dialogManager.isDialogActive()) {
             // Update player
@@ -918,7 +946,7 @@ public class Play implements Screen {
                 if (monster != null) {
                     if (!monster.isAlive()) {
                         // If monster is dead and death animation is finished
-                        if (monster.getCurrentState() == MonsterState.DEATH && 
+                        if (monster.getCurrentState() == MonsterState.DEATH &&
                             monster.getCurrentAnimation().isAnimationFinished(monster.getStateTime())) {
                             monsters.removeIndex(i);
                             System.out.println("Monster removed after death");
@@ -984,10 +1012,18 @@ public class Play implements Screen {
                     cleanupTimer = 0;
                 }
             }
-            
+
             updateItemVisibility();
             updateItemSpawning(delta);
         }
+
+        // Update level-up timer
+        levelUpTimer += delta;
+        if (levelUpTimer >= LEVEL_UP_INTERVAL) {
+            player.levelUp();
+            levelUpTimer = 0f;
+        }
+
     }
 
     private void checkItemPickup() {
@@ -1009,14 +1045,14 @@ public class Play implements Screen {
                         assetSetter.objectAcquired(item);
                         inventoryTray.addItem(item.getImagePath());
                         inputHandler.setDialogActive(false);
-                        
+
                         // Apply item effects
                         handleItemEffect(item);
                     }
                 );
                 break;
             }
-            
+
         }
     }
 
@@ -1057,8 +1093,8 @@ public class Play implements Screen {
 
     private void renderMonsters(SpriteBatch batch) {
         for (AbstractMonster monster : monsters) {
-            if (monster != null && (monster.isAlive() || 
-                (monster.getCurrentState() == MonsterState.DEATH && 
+            if (monster != null && (monster.isAlive() ||
+                (monster.getCurrentState() == MonsterState.DEATH &&
                  !monster.getCurrentAnimation().isAnimationFinished(monster.getStateTime())))) {
                 monster.render(batch);
             }
@@ -1075,7 +1111,7 @@ public class Play implements Screen {
     private void initItems() {
         System.out.println("Initializing items...");
         assetSetter = new AssetSetter();
-        
+
         // Get the spawning layer from the map
         MapLayer spawnLayer = gameMap.getTiledMap().getLayers().get("spawning_layer");
         if (spawnLayer != null) {
@@ -1083,11 +1119,11 @@ public class Play implements Screen {
                 if (object instanceof RectangleMapObject) {
                     Rectangle rect = ((RectangleMapObject) object).getRectangle();
                     String type = object.getProperties().get("type", String.class);
-                    
+
                     // Convert coordinates to world units
                     int x = (int) rect.x;
                     int y = (int) rect.y;
-                    
+
                     // Spawn different items based on type property
                     switch (type) {
                         case "calcbook":
@@ -1117,7 +1153,7 @@ public class Play implements Screen {
     private void initSpawnPoints() {
         spawnPoints = new Array<>();
         MapLayer spawnLayer = gameMap.getTiledMap().getLayers().get("spawning");
-        
+
         if (spawnLayer != null) {
             for (MapObject object : spawnLayer.getObjects()) {
                 if (object instanceof RectangleMapObject) {
@@ -1131,12 +1167,12 @@ public class Play implements Screen {
 
     private void updateItemSpawning(float delta) {
         if (spawnPoints == null || spawnPoints.size == 0) return;
-        
+
         itemSpawnTimer += delta;
-        
+
         if (itemSpawnTimer >= ITEM_SPAWN_INTERVAL) {
             itemSpawnTimer = 0;
-            
+
             // Find unoccupied spawn points
             Array<SpawnPoint> availablePoints = new Array<>();
             for (SpawnPoint point : spawnPoints) {
@@ -1144,16 +1180,16 @@ public class Play implements Screen {
                     availablePoints.add(point);
                 }
             }
-            
+
             // Spawn item at random available point
             if (availablePoints.size > 0) {
                 SpawnPoint selectedPoint = availablePoints.random();
                 int itemId = getItemIdFromType(selectedPoint.type);
-                
+
                 if (itemId > 0) {
                     assetSetter.createObject(selectedPoint.x, selectedPoint.y, itemId);
                     selectedPoint.isOccupied = true;
-                    System.out.println("Spawned item type: " + selectedPoint.type + 
+                    System.out.println("Spawned item type: " + selectedPoint.type +
                                      " at: " + selectedPoint.x + "," + selectedPoint.y);
                 }
             }
@@ -1162,7 +1198,7 @@ public class Play implements Screen {
 
     private int getItemIdFromType(String type) {
         if (type == null) return 0;
-        
+
         switch (type.toLowerCase()) {
             case "calcbook": return 1;
             case "algebrabook": return 2;
@@ -1175,7 +1211,7 @@ public class Play implements Screen {
 
     public void handleItemPickup(Item item) {
         // ... existing pickup code ...
-        
+
         // Free up spawn point
         for (SpawnPoint point : spawnPoints) {
             if (point.x == (int)item.getX() && point.y == (int)item.getY()) {
